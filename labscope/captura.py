@@ -20,6 +20,21 @@ class Captura:
     def dt(self):
         return float(np.median(np.diff(self.t)))
 
+    def com_sonda(self, sonda):
+        """Mesma captura como se a atenuação de sonda configurada no osciloscópio
+        fosse `sonda` (ex.: canal em 10X com ponta 1X → com_sonda(1) divide por 10).
+        Canais sem 'Probe Atten' nos metadados ficam como estão."""
+        canais, meta = {}, {k: dict(v) if isinstance(v, dict) else v for k, v in self.meta.items()}
+        for canal, v in self.canais.items():
+            configurada = meta.get(canal, {}).get("Probe Atten")
+            fator = sonda / configurada if configurada else 1.0
+            canais[canal] = v * fator
+            if configurada:
+                meta[canal].update({"Probe Atten": sonda, "Probe Atten no osciloscópio": configurada})
+                if "LSB" in meta[canal]:
+                    meta[canal]["LSB"] *= fator
+        return Captura(self.t, canais, meta, self.origem)
+
     def salvar(self, pasta, nome="captura"):
         """Grava `nome`.npz (tudo) e `nome`.csv (Time,CH1,CH2 — abre no ngscopeclient e no Excel)."""
         pasta = Path(pasta)

@@ -8,7 +8,10 @@ Cada comando é independente e nenhum erro derruba a sessão: a captura é grava
 em disco antes da análise, então dá para refazer as contas depois.
 """
 import argparse
+import datetime as dt
+import json
 import math
+import re
 import subprocess
 import sys
 import traceback
@@ -18,12 +21,14 @@ import numpy as np
 
 from .. import medidas
 from .. import relatorio as Rl
+from ..captura import Captura
 from ..instrumentos import (ErroInstrumento, OsciloscopioArquivo, OsciloscopioSimulado, TektronixTBS, Transcricao,
-                            base_de_tempo, ler_arquivo, recursos_visa)
-from ..medidas import METRICAS, PADRAO, RespostaTeorica
+                            base_de_tempo, dica_de_usb, dispositivos_usb_tektronix, ler_arquivo,
+                            recursos_visa)
+from ..medidas import METRICAS, RespostaTeorica
 from ..roteiros import ROTEIROS, Componentes, texto_si, valor_si
 from . import painel
-from .analise import analisar
+from .analise import analisar, linhas_componentes
 from .armazenamento import PastaSessao
 
 AJUDA = """
@@ -51,9 +56,17 @@ Comandos (entre parênteses, o atalho):
                                 rastros de erro completos.
   set abrir on|off              Abrir ou não as figuras ao gerá-las.
   set suavizacao <tempo>        Janela da média móvel aplicada a CH2 (padrão 60u).
+  set sonda <1|10|off>          Atenuação real da ponta, se o canal do osciloscópio estiver em
+                                outra (ex.: canal em 10X com cabo 1X: set sonda 1).
   reset                         Volta todos os componentes aos valores nominais.
+  descartar [n]                 Tira a captura n (padrão: a última) das tabelas; a pasta fica, com
+                                '_descartada' no nome.
+  retomar [pasta]               Continua a última sessão gravada: valores dos componentes, numeração
+                                e capturas já medidas (para 'tabela' e 'grafico').
   comp                          Componentes do caso: nominal e valor em uso.
   scpi <comando>                Envia um comando SCPI cru (com '?' no fim, mostra a resposta).
+  ver (v)                       Desenha a última captura como veio do osciloscópio, sem análise.
+  painel (p)                    Reabre o painel da última captura analisada.
   status                        Resumo da sessão.
   erro                          Rastro completo do último erro.
   help (?)  /  quit (q)
@@ -85,6 +98,7 @@ class SessaoLab:
         self.numero = 0             # contador de capturas da sessão
         self.abrir_figuras = abrir_figuras
         self.suavizacao = 60e-6
+        self.sonda = None           # atenuação real da ponta, quando difere da configurada no osciloscópio
         self.diagnostico = False
         self.ultimo_erro = ""
         self._janela_diagnostico = None
@@ -131,6 +145,8 @@ class SessaoLab:
     def cmd_recursos(self, _args):
         recursos = recursos_visa()
         print("\n".join(f"  {r}" for r in recursos) if recursos else "  nenhum recurso VISA visível")
+        if not any("0x0699" in r.lower() for r in recursos):
+            print("  " + dica_de_usb(dispositivos_usb_tektronix()))
 
     def cmd_conectar(self, args):
         if self.scope is not None:
@@ -224,8 +240,8 @@ class SessaoLab:
         comp = self.comp()
         print(f"  Exp. {self.roteiro.numero} · Tabela {self.caso.tabela} · caso {self.caso.id} "
               f"({self.caso.rotulo}) · {malha.descricao()}")
-        print("  " + "  ".join(f"{self.roteiro.nome(k)} = {texto_si(getattr(comp, k), comp.UNIDADES[k])}"
-                               for k in self.caso.usados))
+        for linha in linhas_componentes(self.roteiro, self.caso, comp):
+            print(f"    {linha}")
         print(f"  Kp = {Rl.num(g['kp'], 2)}   Ki = {Rl.num(g['ki'], 0)} 1/s   Kd = {Rl.num(g['kd'] * 1e3, 4)} ms"
               f"   (sistema tipo {malha.tipo}, ordem {malha.ordem})")
         print(f"  Vc/E1 = {teo.ft}")
@@ -236,13 +252,11 @@ class SessaoLab:
         print(f"  polos (c/ carga): {lista(carga)}")
         if not teo.estavel:
             print("  ! pelo modelo do roteiro esta malha é INSTÁVEL")
-        print(f"\n  {'métrica':<15}{'teórico':>14}{'c/ carga':>14}")
-        for m in PADRAO:
-            if m.chave == "amp" or m.chave.endswith("_dl") or not m.aplicavel(teo):
-                continue
-            rot = m.simbolo if m.chave != "tr" else f"Tr ({teo.subida.replace('-', '–')} %)"
-            print(f"  {rot:<15}{m.formatar(m.prever(teo)):>14}{m.formatar(m.prever(carga)):>14}")
-        print(f"\n  'c/ carga' inclui o resistor R do inversor ({texto_si(comp.R, 'Ω')}) em paralelo com o capacitor.")
+        pico = carga.saturacao()
+        if pico:
+            print(f"  ! o amp-op do controlador teria de chegar a {pico:.0f} V: vai saturar, e a resposta medida "
+                  "sai mais lenta e com menos sobressinal que a teórica")
+        print(f"  'c/ carga' inclui o resistor R do inversor ({texto_si(comp.R, 'Ω')}) em paralelo com o capacitor.")
         print(f"  Tela sugerida: {texto_si(self._s_div_sugerido(), 's')}/div com a borda de subida de CH1 a "
               "1 divisão da esquerda ('preparar' faz isso);")
         print(f"                 CH2 em {texto_si(self._v_div_sugerido(), 'V')}/div centrado em 0 V "
@@ -263,6 +277,11 @@ class SessaoLab:
                 (self._abrir_terminal_de_diagnostico if ligado else self._fechar_terminal_de_diagnostico)()
             print(f"  {chave}: {'ON' if ligado else 'OFF'}")
             return
+        if chave == "sonda":
+            self.sonda = None if valor.lower() in ("off", "0") else valor_si(valor.lower().rstrip("x"))
+            print(f"  sonda: {f'{self.sonda:g}X nas contas, seja qual for a configurada no osciloscópio' if self.sonda else 'a configurada no osciloscópio'}"
+                  " ('calcular' refaz a última captura)")
+            return
         if chave == "suavizacao":
             self.suavizacao = valor_si(valor)
             print(f"  média móvel de {texto_si(self.suavizacao, 's')} em CH2 (vale a partir do próximo cálculo)")
@@ -279,6 +298,73 @@ class SessaoLab:
     def cmd_reset(self, _args):
         self.reais.clear()
         print("  componentes de volta aos valores nominais")
+
+    def cmd_descartar(self, args):
+        """Tira uma captura (por padrão, a última) das tabelas e gráficos: a pasta
+        ganha '_descartada' no nome e nada é apagado. O caso volta a usar a
+        captura anterior dele, se houver."""
+        n = int(args[0]) if args else self.numero
+        pastas = [p for p in self.pasta.caminho.glob(f"{n:02d}_e*") if p.is_dir() and not p.name.endswith("_descartada")]
+        if not pastas:
+            raise ValueError(f"captura #{n:02d} não encontrada em {self.pasta.caminho}")
+        pastas[0].rename(pastas[0].with_name(pastas[0].name + "_descartada"))
+        print(f"  #{n:02d} descartada ({pastas[0].name}_descartada); refazendo a lista de casos medidos...")
+        caso, roteiro = self.caso, self.roteiro
+        self.cmd_retomar([str(self.pasta.caminho)])
+        self.caso, self.roteiro = caso, roteiro
+
+    def cmd_retomar(self, args):
+        """Continua uma sessão gravada (por padrão, a mais recente): mesma pasta,
+        numeração seguindo, valores reais dos componentes e capturas reanalisadas,
+        para 'tabela' e 'grafico' enxergarem tudo que já foi medido."""
+        if args:
+            pasta = Path(" ".join(args))
+        else:
+            anteriores = sorted(p for p in self.pasta.caminho.parent.glob("sessao_*")
+                                if p.is_dir() and p != self.pasta.caminho)
+            if not anteriores:
+                raise ValueError(f"nenhuma sessão gravada em {self.pasta.caminho.parent}")
+            pasta = anteriores[-1]
+        capturas = sorted((int(p.name[:2]), p) for p in pasta.glob("[0-9][0-9]_*") if p.is_dir())
+        if not capturas:
+            raise ValueError(f"{pasta} não tem capturas")
+        reais, resultados, falhas, ultimo = {}, {}, [], None
+        for n, p in capturas:
+            if not (p / "metricas.json").exists() or p.name.endswith("_descartada"):
+                continue                                   # sem análise ou descartada: só entra na numeração
+            dados = json.loads((p / "metricas.json").read_text(encoding="utf-8"))
+            roteiro = ROTEIROS[dados["experimento"]]()
+            caso = roteiro.caso(dados["caso"])
+            for k, real in dados["componentes"].items():   # o valor real vale para todo caso com o mesmo nominal
+                nominal = getattr(caso.comp, k)
+                if real != nominal:
+                    reais[(k, nominal)] = real
+                else:
+                    reais.pop((k, nominal), None)
+            try:
+                captura = Captura.carregar(p / "captura.npz")
+                if self.sonda:
+                    captura = captura.com_sonda(self.sonda)
+                comp = caso.comp.trocar(**dados["componentes"])
+                res = analisar(captura, roteiro, caso, comp, suavizacao=self.suavizacao, numero=n)
+            except Exception as exc:
+                falhas.append(f"#{n:02d} ({exc})")
+                continue
+            res.ganhos_id = dados.get("ganhos_identificados")
+            resultados[(roteiro.numero, caso.id)] = res
+            ultimo = res
+        self.pasta.caminho = pasta
+        self.reais = reais
+        self.resultados = resultados
+        self.numero = capturas[-1][0]
+        if ultimo is not None:
+            self.ultimo, self.ultima_captura = ultimo, ultimo.captura
+            self.roteiro, self.caso = ultimo.roteiro, ultimo.caso
+        print(f"  retomando {pasta}: {len(capturas)} capturas, {len(resultados)} casos medidos, "
+              f"a próxima será a #{self.numero + 1:02d}")
+        if falhas:
+            print("  não reanalisadas: " + "; ".join(falhas))
+        self.cmd_comp([])
 
     # ------------------------------------------------------------ diagnóstico
     def _abrir_terminal_de_diagnostico(self):
@@ -307,16 +393,28 @@ class SessaoLab:
     # ------------------------------------------------------------ medir
     def _analisar(self, captura, numero):
         """Analisa, grava, mostra a tabela e abre o painel."""
+        if self.sonda:
+            captura = captura.com_sonda(self.sonda)
         res = analisar(captura, self.roteiro, self.caso, self.comp(), suavizacao=self.suavizacao, numero=numero)
-        pasta = self.pasta.salvar(res)
-        figura = painel.painel(res, pasta / "painel.png")
         self.resultados = {k: v for k, v in self.resultados.items() if v.numero != numero}
         self.resultados[(self.roteiro.numero, self.caso.id)] = res
         self.ultimo = res
-        print(res.texto())
+        print(res.texto())          # as contas aparecem mesmo que gravar em disco dê problema
+        pasta = self.pasta.salvar(res)
         print(f"  salvo em {pasta}")
-        self._mostrar(figura)
+        self._mostrar(self._figura(lambda caminho: painel.painel(res, caminho), pasta / "painel.png"))
         return res
+
+    @staticmethod
+    def _figura(desenhar, caminho):
+        """Desenha em `caminho`; se o Windows não deixar gravar ali (arquivo preso
+        em outro programa, pasta apagada no meio da sessão), grava com outro nome."""
+        try:
+            return desenhar(caminho)
+        except OSError as exc:
+            alternativo = caminho.with_name(f"{caminho.stem}_{dt.datetime.now():%H%M%S}{caminho.suffix}")
+            print(f"  (não consegui gravar {caminho.name}: {exc}; gravando como {alternativo.name})")
+            return desenhar(alternativo)
 
     def _nova_captura(self, captura):
         self.numero += 1
@@ -328,7 +426,26 @@ class SessaoLab:
             bruta = self.pasta.garantir() / f"{self.numero:02d}_sem_analise"
             captura.salvar(bruta)
             print(f"  captura #{self.numero:02d} gravada sem análise em {bruta}; corrija e use 'calcular'")
+            try:    # mostra o que veio do osciloscópio, para dar para ver o que há de errado
+                self._mostrar(painel.bruto(captura, bruta / "bruto.png", f"captura #{self.numero:02d} (sem análise)"))
+            except Exception as exc:
+                print(f"  (não consegui desenhar a captura: {exc})")
             raise
+
+    def cmd_ver(self, _args):
+        """Desenha a última captura como veio do osciloscópio, sem análise nenhuma."""
+        if self.ultima_captura is None:
+            raise ValueError("ainda não há captura nesta sessão: use 'adquirir'")
+        caminho = self.pasta.garantir() / f"{self.numero:02d}_bruto.png"
+        self._mostrar(painel.bruto(self.ultima_captura, caminho, f"captura #{self.numero:02d}"))
+
+    def cmd_painel(self, _args):
+        """Reabre o painel da última captura analisada."""
+        if self.ultimo is None:
+            raise ValueError("ainda não há captura analisada: use 'adquirir' (ou 'ver' para o sinal bruto)")
+        caminho = self.pasta.pasta_captura(self.ultimo) / "painel.png"
+        print(f"  figura: {caminho}")
+        painel.abrir(caminho)
 
     def cmd_adquirir(self, args):
         self._exigir_scope()
@@ -464,22 +581,45 @@ class SessaoLab:
                 "exp": cmd_exp, "casos": cmd_casos, "caso": cmd_caso, "comp": cmd_comp, "teoria": cmd_teoria,
                 "set": cmd_set, "reset": cmd_reset, "adquirir": cmd_adquirir, "carregar": cmd_carregar,
                 "calcular": cmd_calcular, "ajustar": cmd_ajustar, "tabela": cmd_tabela, "grafico": cmd_grafico,
-                "lgr": cmd_lgr, "status": cmd_status, "erro": cmd_erro, "help": cmd_help}
-    ATALHOS = {"a": "adquirir", "c": "calcular", "t": "teoria", "?": "help", "ajuda": "help", "gráfico": "grafico"}
+                "lgr": cmd_lgr, "status": cmd_status, "erro": cmd_erro, "help": cmd_help, "ver": cmd_ver, "retomar": cmd_retomar, "descartar": cmd_descartar,
+                "painel": cmd_painel}
+    ATALHOS = {"a": "adquirir", "c": "calcular", "t": "teoria", "?": "help", "ajuda": "help", "gráfico": "grafico",
+               "v": "ver", "plot": "ver", "p": "painel"}
+
+    @staticmethod
+    def _separar(linha):
+        """Palavras da linha. Sem nenhum espaço (teclado sem barra de espaço),
+        vale separar com vírgula ou '=' e colar o número no comando:
+        'caso1.2', 'grafico1', 'set,L,68m', 'L=68m'."""
+        partes = linha.split()
+        if len(partes) != 1:
+            return partes
+        partes = [p for p in re.split(r"[,=]", linha) if p]
+        if len(partes) == 2 and partes[0].upper() in set(Componentes.UNIDADES) | set(Componentes.APELIDOS):
+            return ["set"] + partes        # 'L=68m' é 'set L 68m'
+        colado = re.fullmatch(r"([^\W\d_]+)(\d.*)", partes[0])
+        if colado:
+            partes[:1] = colado.groups()
+        return partes
 
     def executar(self, linha):
         """Executa uma linha de comando. Devolve False para encerrar a sessão."""
-        partes = linha.split()
+        partes = self._separar(linha)
         if not partes:
             return True
         comando, args = partes[0].lower(), partes[1:]
         comando = self.ATALHOS.get(comando, comando)
         if comando in ("quit", "exit", "q", "sair"):
             return False
-        handler = self.COMANDOS.get(comando)
-        if handler is None:
-            print(f"  comando desconhecido: {comando!r} (digite 'help')")
-            return True
+        if comando not in self.COMANDOS:
+            # abreviação: vale se só um comando começa assim
+            candidatos = [c for c in self.COMANDOS if c.startswith(comando)]
+            if len(candidatos) != 1:
+                print(f"  comando ambíguo: {comando!r} pode ser {', '.join(candidatos)}" if candidatos else
+                      f"  comando desconhecido: {comando!r} (digite 'help')")
+                return True
+            comando = candidatos[0]
+        handler = self.COMANDOS[comando]
         try:
             handler(self, args)
         except Exception as exc:  # nenhum erro de comando derruba a sessão

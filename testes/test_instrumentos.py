@@ -209,3 +209,9 @@ def test_arquivo_le_a_pasta_all_mais_nova(tmp_path):
     scope.proxima = 5
     with pytest.raises(ErroInstrumento, match="ALL0005"):
         scope.adquirir()
+
+
+def test_dica_de_usb_reconhece_o_modo_impressora():
+    from labscope.instrumentos import dica_de_usb
+    assert "Rear USB Port -> Computer" in dica_de_usb(["Tektronix PictBridge Device"])
+    assert "driver" in dica_de_usb(["TBS 1052B"]) and "cabo USB-B" in dica_de_usb([])

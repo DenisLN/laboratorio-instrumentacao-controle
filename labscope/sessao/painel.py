@@ -95,8 +95,10 @@ def painel(res, caminho, dpi=130):
                  fontsize=11, x=0.01, ha="left")
     fig.text(0.01, 0.01, f"{res.quando}   {cap.origem}   {res.captura_texto()}", fontsize=7, color="#52514e")
     fig.subplots_adjust(left=0.06, right=0.985, top=0.9, bottom=0.085)
-    fig.savefig(caminho, dpi=dpi)
-    plt.close(fig)
+    try:
+        fig.savefig(caminho, dpi=dpi)
+    finally:
+        plt.close(fig)
     return caminho
 
 
@@ -124,6 +126,26 @@ def _polos(ax, res):
         marcas.append((exp, "experimental", 0, "s"))
     G.lugar_raizes(ax, [], marcas, "Polos dominantes")
     ax.legend(fontsize=8, frameon=False, loc="upper left")
+
+
+def bruto(captura, caminho, titulo="", dpi=130):
+    """A captura como veio do osciloscópio: todos os canais contra o tempo, sem análise."""
+    fig, ax = plt.subplots(figsize=(10.0, 5.2))
+    t = captura.t * 1e3
+    for k, canal in enumerate(sorted(captura.canais)):
+        v = captura[canal]
+        escala = captura.meta.get(canal, {}).get("Vertical Scale")
+        rot = (f"{canal}: {v.min():+.3f} a {v.max():+.3f} V"
+               + (f"  ({escala * 1e3:g} mV/div)" if escala else ""))
+        ax.plot(t, v, color=G.CINZA if k == 0 else G.CORES[(k - 1) % len(G.CORES)], lw=1.2, label=rot)
+    ax.set_xlim(t[0], t[-1])
+    ax.set_xlabel("tempo (ms, zero no trigger)")
+    ax.set_ylabel("tensão (V)")
+    ax.set_title(f"{titulo}   {captura.origem}".strip(), fontsize=10, loc="left")
+    ax.legend(fontsize=9, frameon=False, loc="upper right")
+    G.limpar(ax)
+    G.salvar(fig, caminho, dpi)
+    return caminho
 
 
 def grafico_tabela(tabela, resultados, caminho, dpi=160):

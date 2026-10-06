@@ -32,8 +32,18 @@ class PastaSessao:
         return destino
 
     def salvar(self, res):
-        """Grava a captura e as métricas; devolve a pasta."""
-        pasta = self.pasta_captura(res)
+        """Grava a captura e as métricas; devolve a pasta. Se a pasta da captura
+        não aceitar escrita (aberta em outro programa, apagada no meio da sessão),
+        grava numa pasta nova ao lado, com o horário no nome."""
+        try:
+            return self._gravar(self.pasta_captura(res), res)
+        except OSError:
+            alternativa = self.garantir() / f"{res.numero:02d}_e{res.roteiro.numero}_c{res.caso.id}_{dt.datetime.now():%H%M%S}"
+            alternativa.mkdir()
+            return self._gravar(alternativa, res)
+
+    @staticmethod
+    def _gravar(pasta, res):
         res.captura.salvar(pasta)
         (pasta / "metricas.json").write_text(json.dumps(res.como_dict(), indent=1, ensure_ascii=False),
                                              encoding="utf-8")

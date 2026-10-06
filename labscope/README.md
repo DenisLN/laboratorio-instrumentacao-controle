@@ -26,7 +26,13 @@ Ligações: **CH1 = e₁** (saída do gerador), **CH2 = V_c**, cabo USB-B na tra
 | `grafico 1` | os casos da Tabela 1 no mesmo gráfico, com as curvas teóricas |
 | `lgr` | lugar das raízes do caso, com os polos teóricos e medidos |
 | `set diagnostico on` | abre uma janela acompanhando a transcrição SCPI e mostra rastros de erro |
+| `ver` / `painel` | a última captura como veio do osciloscópio / reabre o último painel |
+| `set sonda 1` | ponta 1X com o canal do osciloscópio em 10X: corrige as tensões nas contas |
+| `retomar` | continua a última sessão gravada: componentes, numeração e capturas já medidas |
+| `descartar 27` | tira a captura #27 das tabelas (a pasta fica, com `_descartada` no nome) |
 | `help` | todos os comandos |
+
+Comandos podem ser abreviados quando não há ambiguidade (`con`, `adq`), e funcionam sem barra de espaço: `caso1.2`, `L=68m`, `set,sonda,1`, `tabela1`. Nesse modo o decimal é com ponto.
 
 A tabela que aparece a cada aquisição tem três colunas de valor: **experimental**, **teórico** (o modelo do roteiro) e **c/ carga** (o mesmo modelo com o resistor R do inversor de realimentação em paralelo com o capacitor da planta, que o roteiro ignora). Uma métrica só é marcada `CONFERIR` se ficar fora da tolerância dos dois modelos. O `resíduo RMS` compara a curva inteira de CH2 com cada modelo; perto do LSB, a montagem está reproduzindo o modelo.
 
@@ -38,11 +44,14 @@ Tudo vai para `sessoes/sessao_<data>_<hora>/`:
 tabelas_exp7.md   grafico_exp7_tabela1.png   lgr_exp7_c1.2_R2.png   scpi_transcricao.log
 ```
 
+Avisos que a sessão dá sozinha: sinal cortado, janela curta para o T_s previsto, resposta que não acomoda em meio período, amplitude de CH1 dez vezes a do roteiro (sonda 10X/1X trocada) e amp-op do controlador que precisaria passar de 10 V para seguir o modelo linear (satura). V_c e e_ss levam o passo de quantização em conta antes de acusar `CONFERIR`.
+
 A captura é gravada antes da análise. Se a conta falhar (canal trocado, sem borda na tela), ela fica em `NN_sem_analise/` e `calcular` a reaproveita depois de corrigir o caso ou os componentes.
 
 ### Se a USB não funcionar
 
-Salve no osciloscópio como sempre ("Save All" no pendrive) e use a mesma sessão:
+- `recursos` não lista nenhum `0x0699`: o osciloscópio pode estar com a porta traseira em modo impressora (o Windows mostra "Tektronix PictBridge Device"). No osciloscópio: Utility → Options → Rear USB Port → Computer. O `conectar` detecta isso e avisa.
+- Plano B, o pendrive: salve no osciloscópio como sempre ("Save All") e use a mesma sessão:
 
 ```
 lab> conectar E:\NEW_FOL        (a pasta que contém as ALLnnnn)

@@ -145,7 +145,12 @@ def test_troca_de_roteiro_e_teoria(tmp_path, capsys):
     s.executar("exp 6")
     s.executar("caso 2.2")
     saida = capsys.readouterr().out
-    assert "50 Hz" in saida and "RLC + P" in saida and "ζ" in saida and "Tela sugerida" in saida
+    assert "50 Hz" in saida and "RLC + P" in saida and "Tela sugerida" in saida
+    assert "    L   = 77 mH" in saida and "    R1  = 100 Ω" in saida
+    assert "Tp" not in saida and "Mp" not in saida             # a teoria não lista mais as métricas
+    s.executar("L=68m")
+    s.executar("teoria")
+    assert "    L   = 68 mH   (nominal 77 mH)" in capsys.readouterr().out
     assert s.roteiro.numero == 6 and s.caso.id == "2.2"
 
 
@@ -185,3 +190,102 @@ def test_main_roda_comandos_e_sai(tmp_path, capsys):
     assert cli.main(["--sim", "--sem-abrir", "--pasta", str(tmp_path), "-c", "caso 2.1; a; status"]) == 0
     saida = capsys.readouterr().out
     assert "caso 2.1 (C2 = 1 nF)" in saida and "capturas: 1" in saida
+
+
+def test_comando_abreviado_vale_se_nao_for_ambiguo(sessao, capsys):
+    sessao.executar("adq")
+    sessao.executar("stat")
+    sessao.executar("co")
+    saida = capsys.readouterr().out
+    assert "#01  Exp. 7" in saida and "capturas: 1" in saida
+    assert "comando ambíguo: 'co' pode ser conectar, comp" in saida
+
+
+def test_linha_sem_espaco_tambem_funciona(sessao, capsys):
+    """Para teclado sem barra de espaço: número colado no comando, vírgula ou '=' no lugar do espaço."""
+    for linha in ("caso1.2", "a", "L=68m", "R2=9.8k", "set,C1,12n", "grafico1", "tabela1", "v", "p"):
+        sessao.executar(linha)
+    saida = capsys.readouterr().out
+    assert "ERRO" not in saida and "desconhecido" not in saida
+    assert sessao.caso.id == "1.2" and sessao.comp().R2 == 9800.0 and sessao.comp().C1 == pytest.approx(12e-9)
+    assert sessao.comp(sessao.roteiro.caso("4.1")).L == 68e-3
+    arquivos = {p.name for p in sessao.pasta.caminho.iterdir()}
+    assert {"grafico_exp7_tabela1.png", "01_bruto.png"} <= arquivos
+
+
+def test_captura_sem_analise_ganha_o_desenho_do_sinal_bruto(sessao):
+    sessao.scope = _ScopeSemSinal()
+    sessao.executar("adquirir")
+    assert (sessao.pasta.caminho / "01_sem_analise" / "bruto.png").exists()
+
+
+def test_sonda_errada_e_avisada_e_corrigida(sessao, capsys):
+    """Canal em 10X com cabo 1X: tudo sai dez vezes maior."""
+    simulado = sessao.scope
+
+    class Dez(Osciloscopio):
+        def conectar(self):
+            return "dez"
+
+        def adquirir(self, canais=("CH1", "CH2")):
+            cap = simulado.adquirir()
+            for c in cap.canais:
+                cap.canais[c] = cap.canais[c] * 10
+                cap.meta[c]["Probe Atten"] = 10.0
+            return cap
+
+    sessao.scope = Dez()
+    sessao.executar("a")
+    assert "set sonda 1" in capsys.readouterr().out and sessao.ultimo.linha("vc").ok is False
+    sessao.executar("set,sonda,1")
+    sessao.executar("c")
+    saida = capsys.readouterr().out
+    assert sessao.ultimo.linha("amp").exp == pytest.approx(0.5, abs=0.02) and sessao.ultimo.linha("vc").ok
+    assert "set sonda 1" not in saida
+    assert sessao.ultimo.captura.meta["CH1"]["Probe Atten no osciloscópio"] == 10.0
+
+
+def test_pasta_presa_nao_impede_a_analise(sessao, capsys):
+    """Arquivo da captura preso por outro programa: grava com outro nome e segue."""
+    sessao.executar("a")
+    pasta = sessao.pasta.caminho / "01_e7_c1.1"
+    (pasta / "painel.png").unlink()
+    (pasta / "painel.png").mkdir()            # no lugar do arquivo, algo que não aceita escrita
+    sessao.executar("c")
+    saida = capsys.readouterr().out
+    assert "ERRO" not in saida and "#01  Exp. 7" in saida and "não consegui gravar painel.png" in saida
+    assert list(pasta.glob("painel_*.png"))
+    (pasta / "metricas.json").unlink()
+    (pasta / "metricas.json").mkdir()
+    sessao.executar("c")
+    assert "ERRO" not in capsys.readouterr().out
+    assert len(list(sessao.pasta.caminho.glob("01_e7_c1.1_*"))) == 1
+
+
+def test_retomar_traz_componentes_capturas_e_numeracao(tmp_path, capsys):
+    raiz = tmp_path / "sessoes"
+    antes = SessaoLab(raiz, abrir_figuras=False)
+    for linha in ("conectar,sim", "CL=4.6u", "caso1.2", "R2=9.87k", "a", "ajustar", "caso4.2", "L=68.5m", "a"):
+        antes.executar(linha)
+    antes.encerrar()
+    depois = SessaoLab(raiz, abrir_figuras=False)
+    depois.executar("retomar")
+    saida = capsys.readouterr().out
+    assert "2 capturas, 2 casos medidos, a próxima será a #03" in saida and "ERRO" not in saida
+    assert depois.pasta.caminho == antes.pasta.caminho and depois.caso.id == "4.2"
+    assert depois.comp().L == 68.5e-3 and depois.comp(depois.roteiro.caso("1.1")).C == pytest.approx(4.6e-6)
+    assert depois.comp(depois.roteiro.caso("1.2")).R2 == 9870.0
+    assert depois.resultados[(7, "1.2")].ganhos_id["kp"] == pytest.approx(2.0, rel=0.1)
+    depois.executar("conectar,sim")
+    depois.executar("a")
+    assert (antes.pasta.caminho / "03_e7_c4.2").is_dir()
+
+
+def test_descartar_volta_o_caso_para_a_captura_anterior(sessao, capsys):
+    for linha in ("caso1.2", "a", "a", "descartar"):
+        sessao.executar(linha)
+    assert "ERRO" not in capsys.readouterr().out
+    assert sessao.resultados[(7, "1.2")].numero == 1 and sessao.numero == 2
+    assert (sessao.pasta.caminho / "02_e7_c1.2_descartada").is_dir()
+    sessao.executar("a")
+    assert sessao.resultados[(7, "1.2")].numero == 3
