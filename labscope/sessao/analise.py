@@ -10,6 +10,17 @@ from ..medidas import PADRAO, RespostaMedida, RespostaTeorica
 from ..roteiros import texto_si
 
 
+def linhas_componentes(roteiro, caso, comp):
+    """Um componente por linha, com o nominal ao lado quando o valor em uso é outro:
+    'R2  = 9,87 kΩ   (nominal 10 kΩ)'."""
+    linhas = []
+    for k in caso.usados:
+        u, real, nominal = comp.UNIDADES[k], getattr(comp, k), getattr(caso.comp, k)
+        extra = f"   (nominal {texto_si(nominal, u)})" if real != nominal else ""
+        linhas.append(f"{roteiro.nome(k):<3} = {texto_si(real, u)}{extra}")
+    return linhas
+
+
 @dataclass
 class Linha:
     metrica: object
@@ -89,8 +100,9 @@ class Resultado:
                 + ", ".join(l.rotulo for l in self.conferir))
 
     def texto(self):
-        cab = [f"#{self.numero:02d}  {self.titulo()}", f"     {self.componentes_texto()}",
-               f"     {self.ganhos_texto()}      [{self.captura_texto()}]", ""]
+        cab = ([f"#{self.numero:02d}  {self.titulo()}"]
+               + [f"     {l}" for l in linhas_componentes(self.roteiro, self.caso, self.comp)]
+               + [f"     {self.ganhos_texto()}      [{self.captura_texto()}]", ""])
         corpo = ["  " + l for l in self.linhas_texto()]
         rodape = ["", "  " + self.residuo_texto()] + [f"  ! {a}" for a in self.avisos] + ["  => " + self.veredito()]
         return "\n".join(cab + corpo + rodape)
@@ -117,6 +129,17 @@ def _avisos(captura, roteiro, medida, teoria, teoria_carga):
     for canal, meta in captura.meta.items():
         if isinstance(meta, dict) and meta.get("cortado"):
             avisos.append(f"{canal} saiu da tela (sinal cortado): aumente V/div")
+    pico = teoria_carga.saturacao()
+    if pico:
+        avisos.append(f"pelo modelo o amp-op do controlador teria de chegar a {pico:.0f} V para seguir esta resposta: "
+                      "ele satura na alimentação, e a subida e o sobressinal medidos ficam menores que os teóricos "
+                      "(a oscilação depois da saturação ainda segue o modelo — compare ω_d decr.)")
+    razao = medida.amplitude / roteiro.amplitude
+    sondas = {m.get("Probe Atten") for m in captura.meta.values() if isinstance(m, dict) and m.get("Probe Atten")}
+    if (8 < razao < 12 or 1 / 12 < razao < 1 / 8) and sondas:
+        avisos.append(f"CH1 com {razao:.3g}× a amplitude do roteiro e osciloscópio com sonda em "
+                      f"{'/'.join(f'{s:g}X' for s in sorted(sondas))}: se a ponta ou o cabo for de outra atenuação, "
+                      "acerte Probe no menu do canal ou use 'set sonda 1' (ou 10) e 'calcular'")
     if not teoria.estavel:
         avisos.append("pelo modelo do roteiro esta malha é INSTÁVEL: polos " + str(np.round(teoria.malha.polos(), 0)))
     semi = 0.5 / roteiro.frequencia
@@ -158,7 +181,8 @@ def analisar(captura, roteiro, caso, comp=None, metricas=PADRAO, suavizacao=60e-
         exp, teo, carga = m.medir(medida), m.prever(teoria), m.prever(teoria_carga)
         if m.chave.endswith("_dl") and math.isnan(exp):
             continue        # oscilação pequena demais para o decremento logarítmico
-        c1, c2 = m.comparar(exp, teo), m.comparar(exp, carga)
+        folga = m.folga(medida)
+        c1, c2 = m.comparar(exp, teo, folga), m.comparar(exp, carga, folga)
         ok = None if (c1.ok is None and c2.ok is None) or not m.julgavel(teoria) else bool(c1.ok or c2.ok)
         linhas.append(Linha(m, m.rotulo(medida), exp, teo, carga, c1.desvio, ok))
     residuo = dict(teo=medida.residuo(teoria) if teoria.estavel else math.nan,

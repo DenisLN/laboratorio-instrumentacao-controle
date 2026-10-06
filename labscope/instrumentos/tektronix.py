@@ -5,6 +5,8 @@ Lê a forma de onda da tela com CURVe? e a converte com o preâmbulo:
 Referência: TBS1000B/TDS2000C Programmer Manual (077-0444).
 """
 import re
+import subprocess
+import sys
 
 import numpy as np
 
@@ -22,12 +24,42 @@ def recursos_visa(rm=None):
     return list((rm or pyvisa.ResourceManager()).list_resources())
 
 
+def dispositivos_usb_tektronix():
+    """Nomes com que o Windows enxerga os aparelhos Tektronix ligados na USB
+    agora (ex.: 'Tektronix PictBridge Device'). Lista vazia se não há nenhum
+    ou se não deu para perguntar."""
+    if sys.platform != "win32":
+        return []
+    comando = ("Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match 'VID_0699' } | "
+               "ForEach-Object { $_.FriendlyName }")
+    try:
+        saida = subprocess.run(["powershell.exe", "-NoProfile", "-Command", comando], capture_output=True,
+                               text=True, timeout=15).stdout
+    except Exception:      # é só um diagnóstico: sem PowerShell, segue sem a dica
+        return []
+    return [linha.strip() for linha in saida.splitlines() if linha.strip()]
+
+
+def dica_de_usb(dispositivos):
+    """O que fazer quando o VISA não lista o osciloscópio, a partir de como o
+    Windows o enxerga."""
+    if any("pictbridge" in d.lower() for d in dispositivos):
+        return ("O osciloscópio está na USB em modo IMPRESSORA (PictBridge), e assim não aceita comandos. "
+                "No osciloscópio: Utility -> Options -> Rear USB Port -> Computer, e tente de novo.")
+    if dispositivos:
+        return (f"O Windows enxerga o aparelho ({'; '.join(dispositivos)}), mas o VISA não: falta o driver "
+                "USBTMC (veja no Gerenciador de Dispositivos se ele aparece como 'USB Test and Measurement Device').")
+    return ("O Windows não enxerga nenhum Tektronix na USB: confira o cabo USB-B (porta traseira do "
+            "osciloscópio, não a do pendrive).")
+
+
 class TektronixTBS(Osciloscopio):
     nome = "Tektronix TBS/TDS"
 
     def __init__(self, recurso=None, rm=None, timeout_ms=10000):
         self.recurso = recurso
         self._rm = rm
+        self._visa_real = rm is None      # só vale perguntar ao Windows se o VISA é o de verdade
         self.timeout_ms = timeout_ms
         self.con = None
         self.idn = ""
@@ -60,9 +92,10 @@ class TektronixTBS(Osciloscopio):
             self.escrever("HEADer OFF")
             self.escrever("*CLS")
             return idn
+        dica = (dica_de_usb(dispositivos_usb_tektronix()) if self._visa_real else
+                "Confira o cabo USB-B e o driver VISA ('recursos' lista o que o computador enxerga).")
         raise ErroInstrumento("nenhum Tektronix respondeu. " + ("Tentativas: " + "; ".join(erros) + ". " if erros else
-                              "Nenhum recurso VISA listado. ") + "Confira o cabo USB-B e o driver VISA "
-                              "('recursos' lista o que o computador enxerga); o plano B é 'conectar <pasta do pendrive>'.")
+                              "Nenhum recurso VISA listado. ") + dica + " O plano B é 'conectar <pasta do pendrive>'.")
 
     def _candidatos(self):
         todos = list(self._rm.list_resources())

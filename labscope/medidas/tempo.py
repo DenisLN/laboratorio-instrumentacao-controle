@@ -61,6 +61,9 @@ class ValorFinal(Metrica):
     def medir(self, medida):
         return medida.vc
 
+    def folga(self, medida):
+        return medida.lsb       # Vc sai de dois patamares quantizados
+
     def prever(self, teoria):
         return teoria.amplitude * teoria.ganho_dc
 
@@ -71,6 +74,10 @@ class ErroEstacionario(Metrica):
 
     def medir(self, medida):
         return medida.erro_regime
+
+    def folga(self, medida):
+        # V_c e A vêm de canais diferentes, cada um com seu passo de quantização
+        return 2 * medida.lsb / medida.amplitude
 
     def prever(self, teoria):
         return 1 - teoria.ganho_dc if teoria.estavel else math.nan

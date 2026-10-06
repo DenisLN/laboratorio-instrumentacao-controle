@@ -174,3 +174,23 @@ def test_medida_aguenta_telas_fora_do_padrao(t0, entrada):
     for k in ("tr", "tp", "mp", "ts"):
         assert m.degrau[k] == pytest.approx(teoria.degrau[k], rel=0.02), k
     assert m.oscilacao["wd"] == pytest.approx(teoria.dominante["wd"], rel=0.02)
+
+
+def test_folga_de_quantizacao_entra_na_comparacao():
+    """Com CH2 a 500 mV/div (LSB de 20 mV), 5 % de e_ss num degrau de 0,5 V é resolução, não erro."""
+    ess = METRICAS["ess"]
+    assert not ess.comparar(-0.052, 0.0).ok
+    assert ess.comparar(-0.052, 0.0, folga=2 * 0.02 / 0.504).ok
+    _, m = _medida(E7, "1.2", 1e-3, quantizar=True)
+    assert METRICAS["vc"].folga(m) == pytest.approx(m.lsb) and ess.folga(m) == pytest.approx(2 * m.lsb / m.amplitude)
+
+
+def test_preve_saturacao_do_amp_op_do_controlador():
+    """Caso 5.1 do Exp. 7 com R_L = 10 kΩ: a resposta linear exigiria uns 30 V na saída do controlador."""
+    comp = dict(R2=9.86e3, C1=1.059e-9, R1=9820, L=68.5e-3, C=979.2e-9)
+    satura = RespostaTeorica(E7.caso("5.1").malha(E7.caso("5.1").comp.trocar(**comp, C2=918e-12), carga=True))
+    assert satura.saturacao() == pytest.approx(30.8, abs=1.0)
+    t, v2 = satura.controlador
+    assert v2[-1] == pytest.approx(0.5 * (1 + 9820 / 10e3), abs=0.02)     # regime: V_c·(1 + R_L/R)
+    assert RespostaTeorica(E7.caso("4.2").malha(carga=True)).saturacao() is None
+    assert RespostaTeorica(E7.caso("1.3").malha(carga=True)).saturacao() is None   # pico curto da derivada não conta

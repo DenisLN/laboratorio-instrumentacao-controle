@@ -44,14 +44,20 @@ class Metrica(ABC):
         quando o próprio método de medida não vale para a malha."""
         return True
 
+    def folga(self, medida: RespostaMedida) -> float:
+        """Incerteza da própria medida, em SI (ex.: o passo de quantização do
+        osciloscópio): um desvio menor que isso não acusa nada na montagem."""
+        return 0.0
+
     def rotulo(self, medida=None):
         return self.simbolo
 
-    def comparar(self, exp, teo):
+    def comparar(self, exp, teo, folga=0.0):
         if exp is None or teo is None or math.isnan(exp) or math.isnan(teo):
             return Comparacao(exp, teo, math.nan, None)
         desvio = (exp - teo) / teo if teo else math.nan
-        return Comparacao(exp, teo, desvio, abs(exp - teo) <= max(self.tolerancia * abs(teo), self.tolerancia_abs))
+        limite = max(self.tolerancia * abs(teo), self.tolerancia_abs, folga)
+        return Comparacao(exp, teo, desvio, abs(exp - teo) <= limite)
 
     def formatar(self, x, unidade=True):
         return relatorio.num(x, self.casas, self.unidade if unidade else "", self.escala)

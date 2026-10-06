@@ -65,6 +65,34 @@ class RespostaTeorica:
         """Saída prevista nos instantes `t` para a onda quadrada `entrada`."""
         return modelo.resposta_a_quadrada(*self.ft, t, entrada, n_aquec)[1]
 
+    @cached_property
+    def controlador(self):
+        """Tensão que o amp-op do controlador teria de entregar à planta numa
+        borda da onda quadrada (de −A para +A), pelo modelo linear: (t, v2).
+
+        Sai de V_c: como V_c = G·V₂ e G = 1/den(s) (sem ESR), V₂ = den(d/dt)·V_c.
+        Devolve None se a planta tiver numerador (ESR) ou a malha for instável."""
+        g = self.malha.planta_efetiva.ft()
+        if len(g.num) != 1 or not self.estavel:
+            return None
+        t, y = modelo.resposta_degrau(*self.ft, n=200000)
+        y = 2 * self.amplitude * y - self.amplitude
+        v2, derivada = np.zeros_like(y), y
+        for c in reversed(g.den):                 # termo de grau 0, depois 1, 2...
+            v2 += c * derivada
+            derivada = np.gradient(derivada, t)
+        return t, v2 / g.num[0]
+
+    def saturacao(self, limite=10.0, duracao=100e-6):
+        """Maior |V₂| previsto, se ele passar de `limite` volts por mais de
+        `duracao` (picos curtos, como o da ação derivativa na borda, não contam)."""
+        if self.controlador is None:
+            return None
+        t, v2 = self.controlador
+        if np.sum(np.abs(v2) > limite) * (t[1] - t[0]) <= duracao:
+            return None
+        return float(np.max(np.abs(v2)))
+
 
 class RespostaMedida:
     """Resposta ao degrau extraída de uma captura (entrada em CH1, saída em CH2).

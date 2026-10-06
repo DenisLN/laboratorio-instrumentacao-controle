@@ -8,7 +8,8 @@
 from .arquivo import OsciloscopioArquivo, ler_arquivo
 from .base import ErroInstrumento, Osciloscopio, Transcricao, base_de_tempo
 from .simulado import OsciloscopioSimulado
-from .tektronix import TektronixTBS, recursos_visa
+from .tektronix import TektronixTBS, dica_de_usb, dispositivos_usb_tektronix, recursos_visa
 
 __all__ = ["Osciloscopio", "ErroInstrumento", "TektronixTBS", "OsciloscopioArquivo", "OsciloscopioSimulado",
-           "ler_arquivo", "recursos_visa", "base_de_tempo", "Transcricao"]
+           "ler_arquivo", "recursos_visa", "base_de_tempo", "Transcricao", "dica_de_usb",
+           "dispositivos_usb_tektronix"]
