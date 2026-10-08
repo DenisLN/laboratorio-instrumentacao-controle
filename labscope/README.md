@@ -102,7 +102,7 @@ Um experimento novo é uma subclasse de `Roteiro` com `casos()` e `tabelas()`; u
 
 ## Núcleo numérico (funções)
 
-As classes acima se apoiam nestes módulos, que continuam utilizáveis sozinhos (`experimento6.py`, na raiz, é um exemplo completo de análise a partir do pendrive):
+As classes acima se apoiam nestes módulos, que continuam utilizáveis sozinhos:
 
 | Módulo | O que faz |
 |---|---|
