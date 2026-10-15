@@ -91,7 +91,7 @@ Com $K_p$ variando o PI desloca o polo em $0$ sobre o eixo real até $-2{,}02$; 
 
 | Controlador | $K_{p,circ}$, $K_{i,circ}$, $K_{d,circ}$ | Calculado | Comercial | Ganhos reais |
 | :--- | :--- | :--- | :--- | :--- |
-| PI | 1,112; 2,251; – | $C_2 = 470\text{ nF}$, $R = 945\text{ k}\Omega$, $R_2 = 1{,}05\text{ M}\Omega$ | $910	ext{ k}\Omega$, $1{,}1	ext{ M}\Omega$, $470	ext{ nF}$ | $K_p = 1{,}21$, $K_i = 2{,}33$ |
+| PI | 1,112; 2,251; – | $C_2 = 470\text{ nF}$, $R = 945\text{ k}\Omega$, $R_2 = 1{,}05\text{ M}\Omega$ | $910\text{ k}\Omega$, $1{,}1\text{ M}\Omega$, $470\text{ nF}$ | $K_p = 1{,}21$, $K_i = 2{,}33$ |
 | PI, alternativa | | $C_2 = 10\ \mu\text{F}$: $R = 44{,}4\text{ k}\Omega$, $R_2 = 49{,}4\text{ k}\Omega$ | $47\text{ k}\Omega$, $51\text{ k}\Omega$ | $K_p = 1{,}085$, $K_i = 2{,}13$ |
 | PD | 0,5708; –; 0,004789 s | $R = 10\text{ k}\Omega$, $R_2 = 5{,}71\text{ k}\Omega$, $C_1 = 839\text{ nF}$ | $5{,}6\text{ k}\Omega$, $1\ \mu\text{F}$ | $K_p = 0{,}56$, $K_d = 0{,}0056$ |
 | PID | 0,3151; 0,04479; 0,006155 s | $C_2 = 33\ \mu\text{F}$, $R = 676{,}5\text{ k}\Omega$, $R_2 = 212{,}6\text{ k}\Omega$, $C_1 = 29\text{ nF}$ | $680\text{ k}\Omega$, $220\text{ k}\Omega$, $33\text{ nF}$ | $K_p = 0{,}325$, $K_i = 0{,}0446$, $K_d = 0{,}00726$ |

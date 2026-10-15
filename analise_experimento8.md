@@ -370,28 +370,28 @@ $$\mathbf{R = \frac{1}{K_i \cdot C_2}}, \qquad \mathbf{R_2 = u \cdot R}, \qquad 
 
 **Dois cuidados que o texto original não tinha.**
 
-1. **Os ganhos de posição estão em V/°; o circuito trabalha em V/V.** O sinal que entra no somador é $V_{ref} - V_{sensor}$, e o sensor de posição dá $k_	heta$ V/°. Então $K_{p,circ} = K_p/k_	heta$, $K_{i,circ} = K_i/k_	heta$, $K_{d,circ} = K_d/k_	heta$. O ganho $k_	heta$ do potenciômetro/sensor do CE110 **não está no roteiro**; abaixo se supõe $k_	heta = 0,1	ext{ V/°}$ (6 V para 60°). Com outro valor, só $R_2$ e $C_1$ mudam proporcionalmente.
-2. **Os ganhos a usar são os do projeto viável** ($T_p = 2500	ext{ ms}$), não os do projeto agressivo ($T_p = 490	ext{ ms}$, 429 V no amp-op) que o texto anterior dimensionava ($R = 358	ext{ k}\Omega$ etc.).
+1. **Os ganhos de posição estão em V/°; o circuito trabalha em V/V.** O sinal que entra no somador é $V_{ref} - V_{sensor}$, e o sensor de posição dá $k_\theta$ V/°. Então $K_{p,circ} = K_p/k_\theta$, $K_{i,circ} = K_i/k_\theta$, $K_{d,circ} = K_d/k_\theta$. O ganho $k_\theta$ do potenciômetro/sensor do CE110 **não está no roteiro**; abaixo se supõe $k_\theta = 0,1\text{ V/°}$ (6 V para 60°). Com outro valor, só $R_2$ e $C_1$ mudam proporcionalmente.
+2. **Os ganhos a usar são os do projeto viável** ($T_p = 2500\text{ ms}$), não os do projeto agressivo ($T_p = 490\text{ ms}$, 429 V no amp-op) que o texto anterior dimensionava ($R = 358\text{ k}\Omega$ etc.).
 
-Ganhos do projeto viável (unidades de posição): $K_p = 0,03151	ext{ V/°}$, $K_i = 0,004479	ext{ V/(°}\cdot	ext{s)}$, $K_d = 0,000616	ext{ V}\cdot	ext{s/°}$. No circuito, com $k_	heta = 0,1	ext{ V/°}$:
-$$K_{p,circ} = 0,3151,\qquad K_{i,circ} = 0,04479	ext{ s}^{-1},\qquad K_{d,circ} = 0,006155	ext{ s}$$
+Ganhos do projeto viável (unidades de posição): $K_p = 0,03151\text{ V/°}$, $K_i = 0,004479\text{ V/(°}\cdot\text{s)}$, $K_d = 0,000616\text{ V}\cdot\text{s/°}$. No circuito, com $k_\theta = 0,1\text{ V/°}$:
+$$K_{p,circ} = 0,3151,\qquad K_{i,circ} = 0,04479\text{ s}^{-1},\qquad K_{d,circ} = 0,006155\text{ s}$$
 
-1. **Discriminante:** $K_i K_d = 0,04479 \cdot 0,006155 = 2,757	imes 10^{-4}$; $\Delta = 0,3151^2 - 4 \cdot 2,757	imes 10^{-4} = 0,09817 > 0$ (raízes reais).
+1. **Discriminante:** $K_i K_d = 0,04479 \cdot 0,006155 = 2,757\times 10^{-4}$; $\Delta = 0,3151^2 - 4 \cdot 2,757\times 10^{-4} = 0,09817 > 0$ (raízes reais).
 2. **Razões:** $\sqrt\Delta = 0,3133$; $u = R_2/R = (0,3151 + 0,3133)/2 = \mathbf{0,3142}$; $v = C_1/C_2 = (0,3151 - 0,3133)/2 = \mathbf{0,00088}$.
-3. **Componentes.** $K_i$ é muito pequeno, então $R = 1/(K_i C_2)$ só cabe em ≤ 1 MΩ com $C_2$ grande: $C_2 = 33\ \mu	ext{F}$ dá $R = 676,5	ext{ k}\Omega$; $R_2 = u R = 212,6	ext{ k}\Omega$; $C_1 = v C_2 = 29	ext{ nF}$.
+3. **Componentes.** $K_i$ é muito pequeno, então $R = 1/(K_i C_2)$ só cabe em ≤ 1 MΩ com $C_2$ grande: $C_2 = 33\ \mu\text{F}$ dá $R = 676,5\text{ k}\Omega$; $R_2 = u R = 212,6\text{ k}\Omega$; $C_1 = v C_2 = 29\text{ nF}$.
 
-*Valores comerciais:* $C_2 = 33\ \mu	ext{F}$ (bipolar, ou dois de $68\ \mu	ext{F}$ de eletrolítico em oposição), $R = 680	ext{ k}\Omega$, $R_2 = 220	ext{ k}\Omega$, $C_1 = 33	ext{ nF}$. Com eles o circuito realiza $K_p = 0,325$, $K_i = 0,0446$, $K_d = 0,00726$: **$K_d$ sai 18 % acima** por causa de $C_1$ (28,95 → 33 nF). Use $R$ e $R_2$ com trimpot multivoltas e ajuste na bancada, ou $C_1 = 27	ext{ nF}\parallel 1,8	ext{ nF}$.
+*Valores comerciais:* $C_2 = 33\ \mu\text{F}$ (bipolar, ou dois de $68\ \mu\text{F}$ de eletrolítico em oposição), $R = 680\text{ k}\Omega$, $R_2 = 220\text{ k}\Omega$, $C_1 = 33\text{ nF}$. Com eles o circuito realiza $K_p = 0,325$, $K_i = 0,0446$, $K_d = 0,00726$: **$K_d$ sai 18 % acima** por causa de $C_1$ (28,95 → 33 nF). Use $R$ e $R_2$ com trimpot multivoltas e ajuste na bancada, ou $C_1 = 27\text{ nF}\parallel 1,8\text{ nF}$.
 
-*Observação:* $v = 0,00088$ significa que a parte derivativa é quase só $K_d$: o PID é praticamente um PI com um pequeno $C_1$ em paralelo com $R$. É consequência de $K_d/K_p = 20	ext{ ms}$ ser muito menor que $	au = 494	ext{ ms}$.
+*Observação:* $v = 0,00088$ significa que a parte derivativa é quase só $K_d$: o PID é praticamente um PI com um pequeno $C_1$ em paralelo com $R$. É consequência de $K_d/K_p = 20\text{ ms}$ ser muito menor que $\tau = 494\text{ ms}$.
 
-#### Dimensionamento do PD de posição (sem carga), $T_p = 1600	ext{ ms}$:
-Sem $C_2$: $Z_{in} = R \parallel C_1$, $Z_f = R_2$, logo $K_p = R_2/R$ e $K_d = R_2 C_1$. Com $K_{p,circ} = 0,5708$ e $K_{d,circ} = 0,004789	ext{ s}$ e $R = 10	ext{ k}\Omega$: $R_2 = 5,71	ext{ k}\Omega$ e $C_1 = K_d/R_2 = 839	ext{ nF}$. Comerciais: $R = 10	ext{ k}\Omega$, $R_2 = 5,6	ext{ k}\Omega$, $C_1 = 1\ \mu	ext{F}$ ($K_d$ 17 % acima: use $0,68\ \mu	ext{F} + 0,15\ \mu	ext{F}$).
+#### Dimensionamento do PD de posição (sem carga), $T_p = 1600\text{ ms}$:
+Sem $C_2$: $Z_{in} = R \parallel C_1$, $Z_f = R_2$, logo $K_p = R_2/R$ e $K_d = R_2 C_1$. Com $K_{p,circ} = 0,5708$ e $K_{d,circ} = 0,004789\text{ s}$ e $R = 10\text{ k}\Omega$: $R_2 = 5,71\text{ k}\Omega$ e $C_1 = K_d/R_2 = 839\text{ nF}$. Comerciais: $R = 10\text{ k}\Omega$, $R_2 = 5,6\text{ k}\Omega$, $C_1 = 1\ \mu\text{F}$ ($K_d$ 17 % acima: use $0,68\ \mu\text{F} + 0,15\ \mu\text{F}$).
 
 ---
 
 ## 7. Conclusões e Recomendações Práticas para a Bancada
 
-1. **Os dados de 2022 servem como referência, não como medida.** Permitiram verificar o código e ter um modelo para projetar ($K = 211,2	ext{ rpm/V}$, $K_t = 0,00501	ext{ V/rpm}$, $	au = 494	ext{ ms}$, $R^2 > 0,986$), mas são de outro grupo e de outro ano. No relatório deste ano, ou entram com a fonte declarada ("dados do relatório de 2022") ou saem; as tabelas medidas têm de ser as da bancada. $K_1$ depende da unidade de $i_g$ (§3.1, item iv) e deve ser conferido.
-2. **O cancelamento polo-zero é a abordagem correta para o PI** e supera as formulações do relatório de 2022: sobressinal nulo, erro nulo, $|V_a|_{max} = 5,6	ext{ V}$ sem carga e $6,6	ext{ V}$ com carga. Com $R = 47	ext{ k}\Omega$ e $R_2 = 51	ext{ k}\Omega$ o zero cai em 1,96 s⁻¹ contra 2,02 s⁻¹ do polo (3 % de diferença): o cancelamento fica quase perfeito.
-3. **Na posição, o limite é o amp-op, não o método.** $T_p$ = $	au$ (490 ms) é inviável (314 V para o PD, 429 V para o PID). Com o $T_p$ mínimo que respeita 10 V (1,6 s para o PD, 2,5 s para o PID) as especificações de $M_p$ se cumprem; o preço é uma resposta lenta, com $T_s pprox 12	ext{ s}$ no PID. Sem carga basta o PD; com carga só o PID zera o erro.
-4. **Circuito:** as tabelas da §6 dão valores para montar o PI imediatamente. O PID e o PD dependem do ganho do sensor de posição $k_	heta$ (suposto 0,1 V/°), que precisa ser medido na bancada; os valores comerciais mudam $K_d$ em 17 % a 18 %, então use trimpots multivoltas.
+1. **Os dados de 2022 servem como referência, não como medida.** Permitiram verificar o código e ter um modelo para projetar ($K = 211,2\text{ rpm/V}$, $K_t = 0,00501\text{ V/rpm}$, $\tau = 494\text{ ms}$, $R^2 > 0,986$), mas são de outro grupo e de outro ano. No relatório deste ano, ou entram com a fonte declarada ("dados do relatório de 2022") ou saem; as tabelas medidas têm de ser as da bancada. $K_1$ depende da unidade de $i_g$ (§3.1, item iv) e deve ser conferido.
+2. **O cancelamento polo-zero é a abordagem correta para o PI** e supera as formulações do relatório de 2022: sobressinal nulo, erro nulo, $|V_a|_{max} = 5,6\text{ V}$ sem carga e $6,6\text{ V}$ com carga. Com $R = 47\text{ k}\Omega$ e $R_2 = 51\text{ k}\Omega$ o zero cai em 1,96 s⁻¹ contra 2,02 s⁻¹ do polo (3 % de diferença): o cancelamento fica quase perfeito.
+3. **Na posição, o limite é o amp-op, não o método.** $T_p$ = $\tau$ (490 ms) é inviável (314 V para o PD, 429 V para o PID). Com o $T_p$ mínimo que respeita 10 V (1,6 s para o PD, 2,5 s para o PID) as especificações de $M_p$ se cumprem; o preço é uma resposta lenta, com $T_s \approx 12\text{ s}$ no PID. Sem carga basta o PD; com carga só o PID zera o erro.
+4. **Circuito:** as tabelas da §6 dão valores para montar o PI imediatamente. O PID e o PD dependem do ganho do sensor de posição $k_\theta$ (suposto 0,1 V/°), que precisa ser medido na bancada; os valores comerciais mudam $K_d$ em 17 % a 18 %, então use trimpots multivoltas.
