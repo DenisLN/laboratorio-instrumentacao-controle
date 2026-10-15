@@ -1,0 +1,482 @@
+[
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.1",
+  "grandeza": "va",
+  "valor": 1.15
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.1",
+  "grandeza": "vt",
+  "valor": 1.07
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.1",
+  "grandeza": "w",
+  "valor": 218.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.1",
+  "grandeza": "tau",
+  "valor": 0.56
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.2",
+  "grandeza": "va",
+  "valor": 2.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.2",
+  "grandeza": "vt",
+  "valor": 1.95
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.2",
+  "grandeza": "w",
+  "valor": 398.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.2",
+  "grandeza": "tau",
+  "valor": 0.5
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.3",
+  "grandeza": "va",
+  "valor": 3.1
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.3",
+  "grandeza": "vt",
+  "valor": 3.09
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.3",
+  "grandeza": "w",
+  "valor": 617.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.3",
+  "grandeza": "tau",
+  "valor": 0.52
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.4",
+  "grandeza": "va",
+  "valor": 4.06
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.4",
+  "grandeza": "vt",
+  "valor": 3.95
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.4",
+  "grandeza": "w",
+  "valor": 812.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.4",
+  "grandeza": "tau",
+  "valor": 0.48
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.5",
+  "grandeza": "va",
+  "valor": 5.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.5",
+  "grandeza": "vt",
+  "valor": 5.19
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.5",
+  "grandeza": "w",
+  "valor": 1031.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.5",
+  "grandeza": "tau",
+  "valor": 0.46
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.6",
+  "grandeza": "va",
+  "valor": 6.09
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.6",
+  "grandeza": "vt",
+  "valor": 6.23
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.6",
+  "grandeza": "w",
+  "valor": 1248.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.6",
+  "grandeza": "tau",
+  "valor": 0.48
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.7",
+  "grandeza": "va",
+  "valor": 7.01
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.7",
+  "grandeza": "vt",
+  "valor": 7.28
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.7",
+  "grandeza": "w",
+  "valor": 1455.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.7",
+  "grandeza": "tau",
+  "valor": 0.48
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.8",
+  "grandeza": "va",
+  "valor": 8.05
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.8",
+  "grandeza": "vt",
+  "valor": 8.32
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.8",
+  "grandeza": "w",
+  "valor": 1666.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.8",
+  "grandeza": "tau",
+  "valor": 0.5
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.9",
+  "grandeza": "va",
+  "valor": 9.01
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.9",
+  "grandeza": "vt",
+  "valor": 9.37
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.9",
+  "grandeza": "w",
+  "valor": 1881.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.9",
+  "grandeza": "tau",
+  "valor": 0.48
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.10",
+  "grandeza": "va",
+  "valor": 9.5
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.10",
+  "grandeza": "vt",
+  "valor": 9.85
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.10",
+  "grandeza": "w",
+  "valor": 1973.0
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "1.10",
+  "grandeza": "tau",
+  "valor": 0.48
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.1",
+  "grandeza": "va",
+  "valor": 0.98
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.1",
+  "grandeza": "vt",
+  "valor": 1.01
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.1",
+  "grandeza": "ig",
+  "valor": 9.999999999999999e-06
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.1",
+  "grandeza": "vtc",
+  "valor": 0.93
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.2",
+  "grandeza": "va",
+  "valor": 2.1
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.2",
+  "grandeza": "vt",
+  "valor": 2.13
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.2",
+  "grandeza": "ig",
+  "valor": 1.8999999999999998e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.2",
+  "grandeza": "vtc",
+  "valor": 1.89
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.3",
+  "grandeza": "va",
+  "valor": 2.99
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.3",
+  "grandeza": "vt",
+  "valor": 3.1
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.3",
+  "grandeza": "ig",
+  "valor": 2.8e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.3",
+  "grandeza": "vtc",
+  "valor": 2.53
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.4",
+  "grandeza": "va",
+  "valor": 4.03
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.4",
+  "grandeza": "vt",
+  "valor": 4.14
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.4",
+  "grandeza": "ig",
+  "valor": 3.7999999999999995e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.4",
+  "grandeza": "vtc",
+  "valor": 3.18
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.5",
+  "grandeza": "va",
+  "valor": 5.08
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.5",
+  "grandeza": "vt",
+  "valor": 5.19
+ },
+ {
+  "quando": "2026-10-13T16:13:55",
+  "caso": "2.5",
+  "grandeza": "ig",
+  "valor": 4.7e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.5",
+  "grandeza": "vtc",
+  "valor": 3.9
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.6",
+  "grandeza": "va",
+  "valor": 6.04
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.6",
+  "grandeza": "vt",
+  "valor": 6.23
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.6",
+  "grandeza": "ig",
+  "valor": 5.4999999999999995e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.6",
+  "grandeza": "vtc",
+  "valor": 4.46
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.7",
+  "grandeza": "va",
+  "valor": 7.09
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.7",
+  "grandeza": "vt",
+  "valor": 7.36
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.7",
+  "grandeza": "ig",
+  "valor": 6.5e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.7",
+  "grandeza": "vtc",
+  "valor": 5.11
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.8",
+  "grandeza": "va",
+  "valor": 8.05
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.8",
+  "grandeza": "vt",
+  "valor": 8.4
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.8",
+  "grandeza": "ig",
+  "valor": 7.4e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.8",
+  "grandeza": "vtc",
+  "valor": 5.67
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.9",
+  "grandeza": "va",
+  "valor": 9.02
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.9",
+  "grandeza": "vt",
+  "valor": 9.45
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.9",
+  "grandeza": "ig",
+  "valor": 8.2e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.9",
+  "grandeza": "vtc",
+  "valor": 6.23
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.10",
+  "grandeza": "va",
+  "valor": 9.5
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.10",
+  "grandeza": "vt",
+  "valor": 9.93
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.10",
+  "grandeza": "ig",
+  "valor": 8.7e-05
+ },
+ {
+  "quando": "2026-10-13T16:13:56",
+  "caso": "2.10",
+  "grandeza": "vtc",
+  "valor": 6.47
+ }
+]
