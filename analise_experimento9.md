@@ -23,7 +23,7 @@ Estas decisões foram tomadas no código como opções (`set ...`) e precisam se
 
 1. **O que é $V_g$.** Foi tratada como a tensão do gerador com a carga ligada, e a corrente como proporcional: $i_g = V_g \cdot i_{g,V}$, com $i_{g,V} = 9{,}17\ \mu\text{A/V}$ ajustado na Tabela 2 do Exp. 8 (`set igv`). Em 6 e 9 V isso dá 55 e 82,5 µA. Se $V_g$ for uma tensão aplicada ao gerador como segundo motor (freio), a perturbação é outra.
 2. **Quando a carga entra.** Junto com o degrau de referência, com $i_g$ constante. Se na bancada a carga entrar depois de a resposta acomodar (como o `projeto` do Exp. 8 simula), os valores de $T_r$, $T_p$ e $M_p$ das Tabelas 3 e 4 ficam iguais aos das Tabelas 1 e 2, e o que muda é a queda e a recuperação depois da carga.
-3. **Unidade de $i_g$.** O PDF de 2022 dá $i_g$ em µA; se for mA, $K_1$ cai por 1000 e todas as linhas com carga mudam (§3.1 de `analise_experimento8.md`).
+3. **Unidade de $i_g$ (µA ou mA).** O PDF de 2022 dá $i_g$ em µA; se for mA, $K_1$ cai por 1000 e todas as linhas com carga mudam (§3.1 de `analise_experimento8.md`). Dá para decidir sem o PDF olhando o resistor que estava ligado ao gerador, porque $R_{carga} \approx V_g/i_g$: com os números de 2022 (≈ 9,2 µA por volt) a carga seria de **≈ 110 kΩ**; se a corrente fosse em mA, de **≈ 110 Ω**. O resistor que o roteiro manda ligar (ou o que está na bancada) diz qual dos dois vale. Só $K_1$ e a relação $i_g/V_g$ dependem disso; $K$, $K_t$ e $\tau$ não. **O melhor remédio é medir $i_g$ com o multímetro no Exp. 8 deste ano** e passar a sessão para o `modelo` (§6). Para trocar na mão: `set igv <A por volt>` e, se $K_1$ também mudar, `modelo K=... Kt=... tau=... K1=... igv=...`.
 4. **Sensor de posição.** Suposto $k_\theta = 0{,}1\text{ V/°}$ (60° = 6 V na tela). Só muda a escala da tela e os componentes de $K_p$, $K_i$, $K_d$ do circuito (`set vgrau`).
 5. **PD ou PID com carga.** A folha diz "PD" na Tabela 4, mas o PD não elimina o erro de uma perturbação que entra antes do integrador da posição (§4.3). O padrão do código usa PID nessas linhas (`set tipo pd` para ver o PD).
 
@@ -89,6 +89,14 @@ Com $K_p$ variando o PI desloca o polo em $0$ sobre o eixo real até $-2{,}02$; 
 
 `circuito` calcula $R$, $R_2$, $C_1$ e $C_2$ (série E24 para resistores, E6 para capacitores), com $G_c = Z_f/Z_{in}$; o detector de erro compensa a inversão do amp-op. Ganhos do circuito em V/V; na posição, divididos por $k_\theta$.
 
+**O que são os componentes.** Todos são peças comuns, nenhuma precisa ser trimpot:
+
+- $R$: resistor fixo na **entrada** do amp-op inversor (do detector de erro para a entrada −). No PD e no PID ele tem o capacitor $C_1$ **em paralelo**.
+- $R_2$: resistor na **realimentação** (da saída para a entrada −). No PI e no PID ele fica **em série com $C_2$**; no PD está sozinho.
+- $C_2$: capacitor da ação integral, em série com $R_2$ (não existe no PD). $C_1$: capacitor da ação derivativa, em paralelo com $R$ (não existe no PI).
+
+**O que usar na bancada.** Use os valores comerciais, não os calculados. No PI, **use a linha "PI, alternativa"**: $C_2 = 10\ \mu\text{F}$, $R = 47\text{ k}\Omega$, $R_2 = 51\text{ k}\Omega$. A primeira linha (470 nF, 910 kΩ, 1,1 MΩ) só aparece porque o código escolhe o menor capacitor com $R \le 1\text{ M}\Omega$; valores de MΩ com amp-op comum sofrem com corrente de polarização, e 1 MΩ no lugar de 1,1 MΩ em $R_2$ derrubaria $K_p$ em 10 %. O capacitor de 10 µF tem de ser **bipolar** (ou dois eletrolíticos em oposição), porque a tensão sobre ele inverte. Para o ajuste fino, um trimpot de 5 kΩ em série com $R$ ou $R_2$ já basta; não precisa de trimpot de MΩ. Com `circuito c2 10u` o código dá os valores para outro capacitor.
+
 | Controlador | $K_{p,circ}$, $K_{i,circ}$, $K_{d,circ}$ | Calculado | Comercial | Ganhos reais |
 | :--- | :--- | :--- | :--- | :--- |
 | PI | 1,112; 2,251; – | $C_2 = 470\text{ nF}$, $R = 945\text{ k}\Omega$, $R_2 = 1{,}05\text{ M}\Omega$ | $910\text{ k}\Omega$, $1{,}1\text{ M}\Omega$, $470\text{ nF}$ | $K_p = 1{,}21$, $K_i = 2{,}33$ |
@@ -100,18 +108,81 @@ O PID do projeto precisa de $K_i$ muito pequeno: $R = 1/(K_i C_2)$ só cabe em 1
 
 ## 6. Como usar
 
+A sessão é um prompt (`lab[e9 c1.1]>`): você digita um comando por linha, e o que está entre `[ ]` no prompt é a linha da folha em que está (`c3.2` = Tabela 3, linha 2). Tudo o que ela grava vai para `sessoes\sessao_<data>_<hora>\`.
+
+### 6.1 Ensaiar sem bancada
+
 ```text
-python -m labscope --exp 9 --sim --sem-abrir     # ensaio sem bancada (a captura é a previsão com ruído)
-lab[e9 c1.1]> modelo ref2022                      # ou: modelo sessoes\sessao_..._Exp8
-lab[e9 c1.1]> projeto todos                       # ganhos, polos e previsão de todas as linhas
-lab[e9 c1.1]> circuito                            # componentes desta linha
-lab[e9 c1.1]> preparar                            # trigger em CH1 subindo; aplique o degrau
-lab[e9 c1.1]> a                                   # mede e compara com o previsto
-lab[e9 c1.1]> n                                   # próxima linha
-lab[e9 c4.2]> tabela / grafico 3 / lgr            # tabelas, respostas e lugar das raízes
+python -m labscope --exp 9 --sim
 ```
 
-Na bancada: **CH1 na referência, CH2 no sensor** (Vt no PI), terras juntos; a referência deve ser um degrau de 5,01 V (1000 rpm × $K_t$) no PI e de 6 V no PD/PID ($k_\theta = 0{,}1\text{ V/°}$). A sessão avisa se o degrau de CH1 não bate, se a janela é curta para $T_s$ (precisa de 5 τ ou mais) e se o amp-op deveria saturar. O relatório sai com `python -m labscope.sessao.latex <sessão> <destino>/09`.
+`--sim` liga um osciloscópio de mentira: a "captura" é a previsão do modelo com ruído. Serve para aprender os comandos; **não é medida**. Dentro dela:
+
+```text
+lab[e9 c1.1]> modelo ref2022
+lab[e9 c1.1]> caso 1.1
+lab[e9 c1.1]> a
+lab[e9 c1.1]> n
+```
+
+Repita `a` e `n` até a linha 4.2, e então `tabela`.
+
+### 6.2 Passo 1: o modelo do motor (uma vez por sessão)
+
+O Exp. 9 precisa de $K$, $K_t$, $\tau$, $K_1$ e da relação $i_g/V_g$. Três jeitos, do melhor para o pior:
+
+| Comando | Quando |
+| :--- | :--- |
+| `modelo sessoes\sessao_2026-..._...` | **você mediu o Exp. 8 com a CLI**: aponte para a pasta da sessão dele. Pega as constantes das suas medidas |
+| `modelo K=211,2 Kt=5,01m tau=0,494 K1=9,1e6 igv=9u` | você tem as constantes (do relatório do Exp. 8, p.ex.) mas não a sessão. `igv` é a corrente do gerador em A por volt de $V_g$ |
+| `modelo ref2022` | **só para ensaio**: usa as 20 leituras do relatório de 2022, que são de outro grupo e não podem ser apresentadas como suas |
+
+Depois do `modelo`, a sessão imprime o motor usado e a relação `ig = Vg × … µA/V`. Confira esses dois números antes de continuar (veja o §2, item 3, sobre µA e mA); se estiver errado, `set igv 9u` (ou `set igv 9m`) corrige sem refazer o modelo.
+
+### 6.3 Passo 2: projetar e montar (por linha)
+
+```text
+lab[e9 c1.1]> caso 3.1        # escolhe a linha (n vai para a seguinte)
+lab[e9 c3.1]> projeto         # ganhos, especificações, polos de malha aberta e fechada, previsão
+lab[e9 c3.1]> circuito        # R, R2, C1, C2 (calculados e comerciais) e os ganhos que eles dão
+```
+
+- `projeto todos` faz isso para as seis linhas de uma vez.
+- Se aparecer `!  o amp-op satura`, o $T_p$ pedido é rápido demais para ±10 V: `set tp 2` (segundos) ou `set tp auto` volta ao menor $T_p$ viável.
+- `set tipo pd` mostra o PD nas linhas com carga (e o erro que ele deixa); `set tipo pid` força o PID também sem carga; `set tipo auto` é o padrão.
+- `set vgrau 0.2` troca o ganho do sensor de posição (V/°) se o seu for outro; isso muda a tela e os componentes, não o projeto.
+
+Monte o circuito com os valores **comerciais** do `circuito` e confira: CH1 (referência) e CH2 (sensor) no osciloscópio, terras juntos.
+
+### 6.4 Passo 3: medir
+
+```text
+lab[e9 c3.1]> conectar          # osciloscópio real pela USB (ou: conectar <pasta ALLnnnn do pendrive>)
+lab[e9 c3.1]> teoria            # o que montar, a previsão e a tela sugerida (s/div, V/div)
+lab[e9 c3.1]> preparar          # trigger em CH1 subindo no meio do degrau, aquisição única
+   (ajuste a referência da fonte para 5,01 V no PI, 6 V no PD/PID e aplique o degrau)
+lab[e9 c3.1]> a                 # lê CH1 e CH2, mede, compara com a previsão e abre o painel
+lab[e9 c3.1]> n                 # próxima linha
+```
+
+A tabela que `a` imprime tem, por linha, $\tau$, $T_r$, $T_p$, $M_p$, $T_s$ e o erro final, com a coluna **osciloscópio** (o que você mediu), **previsto** (o modelo), o desvio e `OK` ou `CONFERIR`. Um `CONFERIR` não é erro: é o motor real diferindo do modelo (zona morta, atrito, saturação). Os avisos com `!` dizem o que ajustar: degrau de CH1 diferente do esperado, janela curta para $T_s$ (precisa de 5 τ ou mais), CH2 ocupando poucos níveis do conversor, ou o amp-op que deveria saturar. Para repetir a medida da mesma linha, `a` de novo (a última vale); `descartar` tira a última captura das tabelas.
+
+### 6.5 Passo 4: fechar
+
+```text
+lab[e9 c4.2]> tabela            # as 4 tabelas (linhas sem captura mostram "(previsto)"); salva tabelas_exp9.md
+lab[e9 c4.2]> grafico 3         # as respostas medidas da Tabela 3, medido contra previsto
+lab[e9 c4.2]> lgr               # lugar das raízes da linha atual (polos de malha aberta e fechada)
+lab[e9 c4.2]> quit
+```
+
+O relatório em LaTeX sai fora do prompt:
+
+```text
+python -m labscope.sessao.latex sessoes\sessao_<data>_<hora> <destino>\09 --prefixo <pasta da atividade>\09
+```
+
+Para continuar uma sessão depois: `python -m labscope --exp 9`, `retomar` (a mais recente) ou `retomar <pasta>`; ele recarrega o modelo, as opções (`set ...`) e as capturas. `help` lista todos os comandos.
 
 ## 7. Limites desta preparação
 
