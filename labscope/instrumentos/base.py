@@ -55,8 +55,10 @@ class Osciloscopio(ABC):
     def adquirir(self, canais=("CH1", "CH2")) -> Captura:
         """Lê o que está na tela, com todos os canais da mesma aquisição."""
 
-    def preparar(self, s_div, media=0):
-        """Ajusta base de tempo, trigger em CH1 e média de aquisições (opcional)."""
+    def preparar(self, s_div, media=0, nivel=None, unico=False):
+        """Ajusta base de tempo, trigger em CH1 (no `nivel` dado, ou no meio do
+        sinal) e média de aquisições (opcional). Com `unico`, uma aquisição só:
+        o osciloscópio espera o trigger e para."""
         raise ErroInstrumento(f"{self.nome} não aceita configuração remota")
 
     def fechar(self):

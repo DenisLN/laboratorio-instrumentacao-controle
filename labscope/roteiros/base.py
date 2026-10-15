@@ -105,6 +105,7 @@ class Roteiro(ABC):
     frequencia: float          # Hz da onda quadrada
     amplitude: float = 0.5     # V de pico (1 Vpp)
     nomes: dict = {}           # nome canônico -> como o roteiro chama o componente
+    familia = "malha"          # "malha": controlador + planta com amp-ops; "motor": grupo motor-gerador
 
     @abstractmethod
     def casos(self) -> list:

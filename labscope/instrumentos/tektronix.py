@@ -55,6 +55,8 @@ def dica_de_usb(dispositivos):
 
 class TektronixTBS(Osciloscopio):
     nome = "Tektronix TBS/TDS"
+    VID = VID_TEKTRONIX
+    MARCA = "TEKTRONIX"
 
     def __init__(self, recurso=None, rm=None, timeout_ms=10000):
         self.recurso = recurso
@@ -83,24 +85,27 @@ class TektronixTBS(Osciloscopio):
                 self.registrar("!!", f"{type(exc).__name__}: {exc}")
                 erros.append(f"{recurso}: {exc}")
                 continue
-            if "TEKTRONIX" not in idn.upper():
-                erros.append(f"{recurso}: não é um Tektronix ({idn})")
+            if self.MARCA not in idn.upper():
+                erros.append(f"{recurso}: não é um {self.MARCA.title()} ({idn})")
                 con.close()
                 continue
             self.con, self.recurso, self.idn = con, recurso, idn
-            self._pre = "WFMPre" if _FAMILIA_WFMPRE.search(idn) else "WFMOutpre"
-            self.escrever("HEADer OFF")
-            self.escrever("*CLS")
+            self._ao_conectar(idn)
             return idn
         dica = (dica_de_usb(dispositivos_usb_tektronix()) if self._visa_real else
                 "Confira o cabo USB-B e o driver VISA ('recursos' lista o que o computador enxerga).")
-        raise ErroInstrumento("nenhum Tektronix respondeu. " + ("Tentativas: " + "; ".join(erros) + ". " if erros else
+        raise ErroInstrumento(f"nenhum {self.MARCA.title()} respondeu. " + ("Tentativas: " + "; ".join(erros) + ". " if erros else
                               "Nenhum recurso VISA listado. ") + dica + " O plano B é 'conectar <pasta do pendrive>'.")
+
+    def _ao_conectar(self, idn):
+        self._pre = "WFMPre" if _FAMILIA_WFMPRE.search(idn) else "WFMOutpre"
+        self.escrever("HEADer OFF")
+        self.escrever("*CLS")
 
     def _candidatos(self):
         todos = list(self._rm.list_resources())
-        tek = [r for r in todos if VID_TEKTRONIX in r.lower()]
-        return tek or [r for r in todos if r.upper().startswith("USB")]
+        da_marca = [r for r in todos if self.VID in r.lower()]
+        return da_marca or [r for r in todos if r.upper().startswith("USB")]
 
     def fechar(self):
         if self.con is not None:
@@ -203,17 +208,26 @@ class TektronixTBS(Osciloscopio):
         return t, v, meta
 
     # ------------------------------------------------------------ configuração
-    def preparar(self, s_div, media=0):
+    def preparar(self, s_div, media=0, nivel=None, unico=False):
         """Borda de subida de CH1 a 1 divisão da esquerda da tela, `s_div` por
-        divisão e, se `media` > 0, média de `media` aquisições (4, 16, 64 ou 128)."""
+        divisão e, se `media` > 0, média de `media` aquisições (4, 16, 64 ou 128).
+        `nivel` (V) fixa o nível do trigger, em vez de pô-lo no meio do sinal que
+        está na tela; `unico` arma uma aquisição só (Single Seq), para pegar a
+        partida de um motor quando a fonte liga."""
         self._exigir_conexao()
         comandos = [f"HORizontal:MAIn:SCAle {s_div:.6g}",
                     f"HORizontal:MAIn:POSition {4 * s_div:.6g}",
                     "TRIGger:MAIn:MODe NORMal",
                     "TRIGger:MAIn:EDGE:SOUrce CH1",
                     "TRIGger:MAIn:EDGE:SLOpe RISe",
-                    "TRIGger:MAIn SETLevel"]
+                    f"TRIGger:MAIn:LEVel {nivel:.4g}" if nivel is not None else "TRIGger:MAIn SETLevel"]
         comandos += [f"ACQuire:NUMAVg {media}", "ACQuire:MODe AVErage"] if media else ["ACQuire:MODe SAMple"]
+        comandos.append(f"ACQuire:STOPAfter {'SEQuence' if unico else 'RUNSTop'}")
         for comando in comandos + ["ACQuire:STATE RUN"]:
             self.escrever(comando)
         return self.erros()
+
+    def armar(self):
+        """Espera o próximo trigger (depois de uma aquisição única)."""
+        self._exigir_conexao()
+        self.escrever("ACQuire:STATE RUN")

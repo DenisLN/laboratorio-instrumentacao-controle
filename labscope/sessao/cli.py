@@ -1,6 +1,7 @@
 """Sessão interativa de bancada: adquire do osciloscópio, mede e compara com o modelo.
 
-    python -m labscope            abre o prompt
+    python -m labscope            abre o prompt (Experimento 8)
+    python -m labscope --exp 7    começa em outro roteiro
     python -m labscope --sim      já conectado ao osciloscópio simulado (ensaio sem hardware)
     python -m labscope -c "conectar sim; caso 1.2; adquirir; tabela"
 
@@ -24,7 +25,7 @@ from .. import relatorio as Rl
 from ..captura import Captura
 from ..instrumentos import (ErroInstrumento, OsciloscopioArquivo, OsciloscopioSimulado, TektronixTBS, Transcricao,
                             base_de_tempo, dica_de_usb, dispositivos_usb_tektronix, ler_arquivo,
-                            recursos_visa)
+                            osciloscopio_usb, recursos_visa)
 from ..medidas import METRICAS, RespostaTeorica
 from ..roteiros import ROTEIROS, Componentes, texto_si, valor_si
 from . import painel
@@ -34,11 +35,12 @@ from .armazenamento import PastaSessao
 AJUDA = """
 Comandos (entre parênteses, o atalho):
 
-  conectar [recurso|sim|pasta]  Abre o osciloscópio. Sem argumento, procura um Tektronix na USB.
+  conectar [recurso|sim|pasta]  Abre o osciloscópio. Sem argumento, procura um Tektronix ou um
+                                Keysight (DSO-X) na USB.
                                 "sim" usa um osciloscópio simulado; uma pasta (ex.: E:\\NEW_FOL)
                                 lê as capturas ALLnnnn do pendrive.
   recursos                      Lista os recursos VISA que o computador enxerga agora.
-  exp <6|7>                     Troca de roteiro.
+  exp <6|7|8|9>                   Troca de roteiro (nos 8 e 9, 'help' mostra os comandos do motor/controle).
   casos                         Lista os casos do roteiro e quais já foram medidos.
   caso <id>                     Escolhe o circuito montado (ex.: caso 1.2 = Tabela 1, 2ª linha).
   teoria (t)                    Ganhos, função de transferência, polos e métricas previstas.
@@ -85,7 +87,19 @@ def comando_terminal_diagnostico(caminho_log):
     return ["powershell.exe", "-NoExit", "-Command", script]
 
 
+def classe_da_sessao(experimento):
+    """A sessão de cada família de roteiro: circuitos com amp-op (Exps. 6 e 7) ou
+    o motor CC (Exp. 8) ou o seu controle (Exp. 9)."""
+    from .controle import SessaoControle    # aqui dentro: motor e controle importam este módulo
+    from .motor import SessaoMotor
+    return {"motor": SessaoMotor, "controle": SessaoControle}.get(ROTEIROS[experimento].familia, SessaoLab)
+
+
 class SessaoLab:
+    def __new__(cls, raiz="sessoes", abrir_figuras=True, experimento=7):
+        # SessaoLab(..., experimento=8) já devolve a sessão do motor
+        return super().__new__(classe_da_sessao(experimento) if cls is SessaoLab else cls)
+
     def __init__(self, raiz="sessoes", abrir_figuras=True, experimento=7):
         self.roteiro = ROTEIROS[experimento]()
         self.caso = self.roteiro.casos()[0]
@@ -102,6 +116,20 @@ class SessaoLab:
         self.diagnostico = False
         self.ultimo_erro = ""
         self._janela_diagnostico = None
+        self._ao_entrar()
+
+    def _ao_entrar(self):
+        """Estado próprio da família de roteiro; chamado também quando 'exp' ou
+        'retomar' troca a classe da sessão."""
+
+    def _trocar_roteiro(self, numero):
+        self.roteiro = ROTEIROS[numero]()
+        self.caso = self.roteiro.casos()[0]
+        self.__class__ = classe_da_sessao(numero)
+        self._ao_entrar()
+
+    def _descricao_roteiro(self):
+        return f"onda quadrada de {self.roteiro.frequencia:g} Hz, {2 * self.roteiro.amplitude:g} Vpp"
 
     # ------------------------------------------------------------ estado
     def comp(self, caso=None):
@@ -145,7 +173,7 @@ class SessaoLab:
     def cmd_recursos(self, _args):
         recursos = recursos_visa()
         print("\n".join(f"  {r}" for r in recursos) if recursos else "  nenhum recurso VISA visível")
-        if not any("0x0699" in r.lower() for r in recursos):
+        if not any(v in r.lower() for r in recursos for v in ("0x0699", "0x0957")):
             print("  " + dica_de_usb(dispositivos_usb_tektronix()))
 
     def cmd_conectar(self, args):
@@ -158,7 +186,7 @@ class SessaoLab:
         elif alvo and Path(alvo).is_dir():
             scope = OsciloscopioArquivo(alvo)
         else:
-            scope = TektronixTBS(alvo or None)
+            scope = osciloscopio_usb(alvo or None)       # Tektronix ou Keysight, pelo que está na USB
         scope.transcricao = Transcricao(self.pasta.transcricao)
         idn = scope.conectar()
         self.scope = scope
@@ -199,10 +227,8 @@ class SessaoLab:
     def cmd_exp(self, args):
         if not args or not args[0].isdigit() or int(args[0]) not in ROTEIROS:
             raise ValueError(f"uso: exp <{'|'.join(map(str, ROTEIROS))}>")
-        self.roteiro = ROTEIROS[int(args[0])]()
-        self.caso = self.roteiro.casos()[0]
-        print(f"  Experimento {self.roteiro.numero} – {self.roteiro.titulo} "
-              f"(onda quadrada de {self.roteiro.frequencia:g} Hz, {2 * self.roteiro.amplitude:g} Vpp)")
+        self._trocar_roteiro(int(args[0]))
+        print(f"  Experimento {self.roteiro.numero} – {self.roteiro.titulo} ({self._descricao_roteiro()})")
         self.cmd_casos([])
 
     def cmd_casos(self, _args):
@@ -317,14 +343,9 @@ class SessaoLab:
         """Continua uma sessão gravada (por padrão, a mais recente): mesma pasta,
         numeração seguindo, valores reais dos componentes e capturas reanalisadas,
         para 'tabela' e 'grafico' enxergarem tudo que já foi medido."""
-        if args:
-            pasta = Path(" ".join(args))
-        else:
-            anteriores = sorted(p for p in self.pasta.caminho.parent.glob("sessao_*")
-                                if p.is_dir() and p != self.pasta.caminho)
-            if not anteriores:
-                raise ValueError(f"nenhuma sessão gravada em {self.pasta.caminho.parent}")
-            pasta = anteriores[-1]
+        pasta = self._pasta_para_retomar(args)
+        if self._trocar_para_familia_gravada(pasta):
+            return self.cmd_retomar([str(pasta)])
         capturas = sorted((int(p.name[:2]), p) for p in pasta.glob("[0-9][0-9]_*") if p.is_dir())
         if not capturas:
             raise ValueError(f"{pasta} não tem capturas")
@@ -334,6 +355,8 @@ class SessaoLab:
                 continue                                   # sem análise ou descartada: só entra na numeração
             dados = json.loads((p / "metricas.json").read_text(encoding="utf-8"))
             roteiro = ROTEIROS[dados["experimento"]]()
+            if roteiro.familia != "malha":
+                continue                                   # captura do motor: é da SessaoMotor
             caso = roteiro.caso(dados["caso"])
             for k, real in dados["componentes"].items():   # o valor real vale para todo caso com o mesmo nominal
                 nominal = getattr(caso.comp, k)
@@ -365,6 +388,33 @@ class SessaoLab:
         if falhas:
             print("  não reanalisadas: " + "; ".join(falhas))
         self.cmd_comp([])
+
+    def _pasta_para_retomar(self, args):
+        if args:
+            return Path(" ".join(args))
+        anteriores = sorted(p for p in self.pasta.caminho.parent.glob("sessao_*")
+                            if p.is_dir() and p != self.pasta.caminho)
+        if not anteriores:
+            raise ValueError(f"nenhuma sessão gravada em {self.pasta.caminho.parent}")
+        return anteriores[-1]
+
+    @staticmethod
+    def experimento_gravado(pasta):
+        """Experimento da captura mais recente da pasta (ou 8, se ela só tem
+        anotações do motor); None se não há nada gravado."""
+        for p in sorted((p for p in Path(pasta).glob("[0-9][0-9]_*") if p.is_dir()), reverse=True):
+            if (p / "metricas.json").exists() and not p.name.endswith("_descartada"):
+                return json.loads((p / "metricas.json").read_text(encoding="utf-8"))["experimento"]
+        return 8 if (Path(pasta) / "anotacoes_exp8.json").exists() else None
+
+    def _trocar_para_familia_gravada(self, pasta):
+        """Se a sessão gravada é de outra família de roteiro (motor × circuito),
+        troca a classe desta sessão e devolve True."""
+        numero = self.experimento_gravado(pasta)
+        if numero is None or ROTEIROS[numero].familia == self.roteiro.familia:
+            return False
+        self._trocar_roteiro(numero)
+        return True
 
     # ------------------------------------------------------------ diagnóstico
     def _abrir_terminal_de_diagnostico(self):
@@ -619,9 +669,9 @@ class SessaoLab:
                       f"  comando desconhecido: {comando!r} (digite 'help')")
                 return True
             comando = candidatos[0]
-        handler = self.COMANDOS[comando]
+        handler = getattr(self, self.COMANDOS[comando].__name__)     # a versão da subclasse, se houver
         try:
-            handler(self, args)
+            handler(args)
         except Exception as exc:  # nenhum erro de comando derruba a sessão
             self.ultimo_erro = traceback.format_exc()
             print(f"  ERRO: {exc}")
@@ -653,7 +703,7 @@ class SessaoLab:
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m labscope", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--exp", type=int, default=7, choices=sorted(ROTEIROS), help="roteiro inicial (padrão: 7)")
+    ap.add_argument("--exp", type=int, default=8, choices=sorted(ROTEIROS), help="roteiro inicial (padrão: 8)")
     ap.add_argument("--sim", action="store_true", help="começa conectado ao osciloscópio simulado")
     ap.add_argument("--sem-abrir", action="store_true", help="não abre as figuras no visualizador")
     ap.add_argument("--pasta", default="sessoes", help="onde gravar as sessões (padrão: ./sessoes)")

@@ -187,7 +187,7 @@ def test_comando_do_terminal_de_diagnostico_e_puro(tmp_path):
 
 
 def test_main_roda_comandos_e_sai(tmp_path, capsys):
-    assert cli.main(["--sim", "--sem-abrir", "--pasta", str(tmp_path), "-c", "caso 2.1; a; status"]) == 0
+    assert cli.main(["--exp", "7", "--sim", "--sem-abrir", "--pasta", str(tmp_path), "-c", "caso 2.1; a; status"]) == 0
     saida = capsys.readouterr().out
     assert "caso 2.1 (C2 = 1 nF)" in saida and "capturas: 1" in saida
 

@@ -117,7 +117,7 @@ def test_pid_com_r2_de_100k_cancela_um_polo_com_um_zero():
 # ---------------------------------------------------------------- roteiros
 def test_roteiros_tem_os_casos_das_tabelas():
     assert len(Experimento6().casos()) == 12 and len(Experimento7().casos()) == 14
-    for roteiro in (r() for r in ROTEIROS.values()):
+    for roteiro in (r() for r in ROTEIROS.values() if r.familia == "malha"):    # o Exp. 8 não tem circuito
         ids = {c.id for c in roteiro.casos()}
         assert all(set(t.casos) <= ids for t in roteiro.tabelas())
         assert all(c.malha(carga=carga).estavel() for c in roteiro.casos() for carga in (False, True))

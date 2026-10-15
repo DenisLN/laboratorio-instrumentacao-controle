@@ -1,5 +1,47 @@
 # Changelog
 
+## v3 — 2026-10-15
+
+Experimento 9 (controle do motor CC com perturbações) e revisão da análise do Exp. 8. Ainda não usado em bancada.
+
+### Experimento 9
+
+- `Experimento9`: quatro tabelas da folha (PI e PD/PID, sem carga e com Vg = 6/9 V e 5/8 V), colunas τ, T_r, T_p, M_p e T_s.
+- `labscope.motor.resposta`: `RespostaMalha` mede a resposta ao degrau em malha fechada (CH1 = referência, CH2 = sensor) com a faixa de T_s ampliada quando 2 % passa a ser menos que 1,5 LSB; `previsao` simula o projeto com a carga entrando junto com o degrau.
+- `labscope.motor.componentes`: R, R2, C1 e C2 do PI, PD e PID analógicos, com a série E24/E6 e os ganhos que os valores comerciais realmente dão.
+- `SessaoControle` (`exp 9`, `--exp 9`): `modelo` (dados do Exp. 8 ou digitados), `projeto`, `circuito`, `lgr`, `tabela`, `grafico`, `set tipo|tp|vmax|vgrau|igv`, `retomar`. O T_p padrão é o menor que não satura o amp-op e vale para a tabela inteira, já que Vg não muda os ganhos.
+- `ControleSimulado`: a previsão do modelo com ruído e 8 bits, para ensaiar com `conectar sim`.
+- Exportação LaTeX (`latex_controle`): tabelas com medido e previsto, ganhos e componentes, respostas e lugar das raízes.
+- `labscope/dados/exp8_2022_anotacoes.json`: as 20 leituras do relatório de 2022, só como referência para ensaiar (não são medidas deste ano).
+
+### Revisão do Exp. 8
+
+- `analise_experimento8.md` revisado: PD no T_p = τ pede 314 V (o amp-op satura) e os componentes do PID eram dimensionados sobre esse projeto; unidades de Ki e Kd, ganho da planta de posição e referências a linhas do código corrigidos.
+
+### Outros
+
+- `retomar` e `exp` reconhecem as três famílias (circuitos, motor, controle).
+- 130 → 144 testes.
+
+## v2 — 2026-10-08
+
+Experimento 8 (controle de motor CC) no mesmo fluxo dos outros roteiros, e como roteiro padrão do `LAB.cmd`. Ainda não usado em bancada.
+
+### Experimento 8
+
+- `Experimento8`: Tabela 1 (sem carga) e Tabela 2 (carga no gerador), uma linha por Va de 1 a 10 V.
+- `labscope.motor`: modelo de 1ª ordem (`MotorCC`, eq. 2 e 3 da teoria), mínimos quadrados (`Reta`, `Identificacao`: KKt, K, Kt e a conferência KKt/K, τ médio, K1Kt e K1), medida da partida no osciloscópio (`DegrauMotor`: Va, Vt e τ a 63,2 % da subida de Va, ou pela própria curva quando não há CH1) e projeto com simulação (`ProjetoPI`, `ProjetoPD`, `ProjetoPID`).
+- `SessaoMotor`: herda o prompt da sessão; `exp 8` troca a classe. Novos comandos: anotações (`w=1020`, `ig=120m`, `vt'=2.47`, `anotar 1.4 w 1020`), `proximo` (`n`), `armar` e `projeto`; `ajustar`, `tabela`, `grafico`, `teoria`, `casos`, `retomar` e `descartar` com o sentido do Exp. 8. Cada valor novo é comparado com as retas das outras linhas.
+- `MotorSimulado`: partida de 1ª ordem com zona morta, ondulação do comutador e carga resistiva no gerador, para ensaiar com `conectar sim`.
+- Exportação LaTeX do Exp. 8 (`latex_motor`), chamada pelo mesmo `python -m labscope.sessao.latex`.
+
+### Outros
+
+- `TektronixTBS.preparar(nivel=, unico=)` e `armar()`: nível de trigger fixo e aquisição única (Single Seq). O `preparar` de sempre agora também manda `ACQuire:STOPAfter RUNSTop`, para não ficar preso em aquisição única depois do Exp. 8.
+- `retomar` reconhece se a sessão gravada é do motor ou dos circuitos e troca a classe da sessão.
+- `python -m labscope` abre no Exp. 8; `--exp 7` para os anteriores.
+- 108 → 126 testes.
+
 ## v1 — 2026-10-06
 
 Primeira versão usada de verdade no laboratório. Tudo aqui saiu de algo que aconteceu na bancada, em duas aulas do Experimento 7 (PID).

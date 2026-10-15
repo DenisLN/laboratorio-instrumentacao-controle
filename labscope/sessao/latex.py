@@ -2,7 +2,9 @@
 
     python -m labscope.sessao.latex sessoes/sessao_2026-10-06_13-42-01 saida/07 [--prefixo 07]
 
-Cada caso do roteiro usa a última captura válida dele, como o 'retomar' faz.
+Cada caso do roteiro usa a última captura válida dele, como o 'retomar' faz. Uma
+sessão do Experimento 8 (motor) vai para `latex_motor`, com as tabelas, retas e
+projetos daquele roteiro.
 Os trechos .tex usam caminhos a partir da raiz da disciplina (`07/csv/...`),
 que é como o `doc c` compila.
 """
@@ -34,13 +36,18 @@ ASCII_CODIGO = str.maketrans({**{chr(0x2080 + k): str(k) for k in range(10)},
 VARIAVEL = {"R2": "R_2", "C1": "C_1", "C2": "C_2", "R1": "R_L", "C": "C_L", "L": "L", "R": "R"}
 
 
-def carregar(pasta):
-    """{caso.id: Resultado} da sessão, com a última captura válida de cada caso."""
+def _sessao(pasta):
+    """A sessão gravada, retomada sem imprimir nada (já na classe do roteiro dela)."""
     s = SessaoLab(abrir_figuras=False)
     with contextlib.redirect_stdout(io.StringIO()), warnings.catch_warnings():
         warnings.simplefilter("ignore")
         s.cmd_retomar([str(pasta)])
-    return {cid: res for (_, cid), res in s.resultados.items()}
+    return s
+
+
+def carregar(pasta):
+    """{caso.id: Resultado} da sessão, com a última captura válida de cada caso."""
+    return {cid: res for (_, cid), res in _sessao(pasta).resultados.items()}
 
 
 def _n(x, casas, escala=1.0):
@@ -383,9 +390,16 @@ def codigo(prefixo, pasta):
 def exportar(sessao, destino, prefixo=None):
     destino = Path(destino)
     prefixo = prefixo or destino.name
+    s = _sessao(sessao)
+    if s.roteiro.familia == "motor":
+        from .latex_motor import exportar as exportar_motor
+        return exportar_motor(s, destino, prefixo)
+    if s.roteiro.familia == "controle":
+        from .latex_controle import exportar as exportar_controle
+        return exportar_controle(s, destino, prefixo)
     for sub in ("csv", "tab", "tex", "cod"):
         (destino / sub).mkdir(parents=True, exist_ok=True)
-    por_caso = carregar(sessao)
+    por_caso = {cid: res for (_, cid), res in s.resultados.items()}
     roteiro = next(iter(por_caso.values())).roteiro
     medidas_por_tabela = []
     for tabela in roteiro.tabelas():

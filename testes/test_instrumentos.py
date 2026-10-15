@@ -215,3 +215,79 @@ def test_dica_de_usb_reconhece_o_modo_impressora():
     from labscope.instrumentos import dica_de_usb
     assert "Rear USB Port -> Computer" in dica_de_usb(["Tektronix PictBridge Device"])
     assert "driver" in dica_de_usb(["TBS 1052B"]) and "cabo USB-B" in dica_de_usb([])
+
+
+# ---------------------------------------------------------------- Keysight
+IDN_DSOX = "KEYSIGHT TECHNOLOGIES,DSO-X 2002A,MY12345678,02.65.2021030741"
+
+
+class KeysightFalso:
+    """Um DSO-X 2002A de mentira: preâmbulo e BYTE sem sinal como no Programmer's Guide."""
+
+    def __init__(self, rodando=True):
+        n = np.arange(1000)
+        self.rodando = rodando
+        self.canais = {"CHANNEL1": np.where(n >= 100, 228, 128).astype(np.uint8),
+                       "CHANNEL2": np.clip(128 + n // 5, 0, 220).astype(np.uint8)}
+        self.fonte, self.enviados = "CHANNEL1", []
+
+    def write(self, comando):
+        self.enviados.append(comando)
+        chave, _, valor = comando.partition(" ")
+        if chave.upper() == ":WAVEFORM:SOURCE":
+            self.fonte = valor.upper()
+        if chave.upper() in (":STOP", ":SINGLE"):
+            self.rodando = False
+        if chave.upper() == ":RUN":
+            self.rodando = True
+
+    def query(self, comando):
+        self.enviados.append(comando)
+        c = comando.upper().rstrip("?")
+        respostas = {"*IDN": IDN_DSOX, ":OPEREGISTER:CONDITION": "+8" if self.rodando else "+0",
+                     ":SYSTEM:ERROR": '+0,"No error"', ":TIMEBASE:SCALE": "+1.0E-03",
+                     ":WAVEFORM:PREAMBLE": "+0,+0,+1000,+1,+1.0E-05,-1.0E-03,+0,+4.0E-02,+0.0E+00,+128"}
+        if c in respostas:
+            return respostas[c] + "\n"
+        if c.endswith(":DISPLAY"):
+            return "1\n"
+        if c.endswith(":SCALE"):
+            return "+1.0E+00\n"
+        if c.endswith(":PROBE"):
+            return "+1.0E+01\n"
+        raise TimeoutError(f"sem resposta para {comando}")
+
+    def query_binary_values(self, comando, datatype="b", container=list, **_):
+        self.enviados.append(comando)
+        assert comando == ":WAVeform:DATA?" and datatype == "B" and not self.rodando
+        return container(self.canais[self.fonte])
+
+    def close(self):
+        pass
+
+
+def test_keysight_dsox_le_os_dois_canais_e_volta_ao_run():
+    from labscope.instrumentos import KeysightDSOX, osciloscopio_usb
+    con = KeysightFalso()
+    fantasma = "USB0::0x0957::0x17A4::MY59240844::0::INSTR"       # o do TCC, listado mas longe
+    rm = GerenteFalso({fantasma: OSError("VI_ERROR_RSRC_NFOUND"), "USB0::0x0957::0x1796::MY12345678::0::INSTR": con})
+    scope = osciloscopio_usb(rm=rm)
+    assert isinstance(scope, KeysightDSOX) and scope.conectar() == IDN_DSOX
+    cap = scope.adquirir()
+    assert cap["CH1"][0] == pytest.approx(0.0) and cap["CH1"][-1] == pytest.approx(4.0)
+    assert cap.t[0] == pytest.approx(-1e-3) and cap.dt == pytest.approx(1e-5)
+    assert cap.meta["CH2"]["LSB"] == pytest.approx(0.04) and cap.meta["CH1"]["Probe Atten"] == 10
+    assert ":STOP" in con.enviados and con.enviados[-1] == ":RUN"
+    scope.preparar(0.25, nivel=2.0, unico=True)
+    assert {":TIMebase:SCALe 0.25", ":TIMebase:REFerence LEFT", ":TRIGger:EDGE:LEVel 2", ":TRIGger:EDGE:SOURce CHANnel1",
+            ":SINGle"} <= set(con.enviados)
+    assert not con.rodando and scope.adquirir()["CH2"].max() == pytest.approx(3.68)    # parado: lê sem rearmar
+    assert con.enviados[-1] != ":RUN"
+
+
+def test_osciloscopio_usb_escolhe_o_tektronix_quando_ele_esta_na_usb():
+    from labscope.instrumentos import KeysightDSOX, osciloscopio_usb
+    rm = GerenteFalso({"USB0::0x0957::0x17A4::MY59240844::0::INSTR": OSError("x"),
+                       "USB0::0x0699::0x0368::C012345::INSTR": ConexaoFalsa()})
+    assert type(osciloscopio_usb(rm=rm)) is TektronixTBS
+    assert isinstance(osciloscopio_usb("USB0::0x0957::0x1796::X::INSTR"), KeysightDSOX)

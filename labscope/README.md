@@ -10,7 +10,7 @@ Dependências: `numpy`, `scipy`, `matplotlib` e, para a USB, `pyvisa` com uma bi
 python -m labscope
 ```
 
-ou dois cliques em `LAB.cmd`. Com `--sim` a sessão já abre ligada a um osciloscópio simulado, para ensaiar sem hardware; `--exp 6` começa no roteiro do Experimento 6.
+ou dois cliques em `LAB.cmd`. Abre no Experimento 8 (motor CC, seção abaixo); `--exp 9` abre o controle do motor, `--exp 7` ou `--exp 6` começa nos roteiros com amp-op, e `exp <n>` troca no meio da sessão. Com `--sim` a sessão já abre ligada a um osciloscópio simulado (no Exp. 8, um motor simulado), para ensaiar sem hardware.
 
 Ligações: **CH1 = e₁** (saída do gerador), **CH2 = V_c**, cabo USB-B na traseira do osciloscópio.
 
@@ -66,15 +66,53 @@ ou `carregar E:\NEW_FOL\ALL0007` para uma pasta avulsa.
 - CH2 ocupando boa parte da tela sem cortar o pico. Sinal cortado e janela curta geram avisos.
 - A média de aquisições do osciloscópio (`preparar 1m media 16`) reduz bastante o ruído de quantização.
 
+## Experimento 8 – motor CC
+
+Não há circuito para montar: cada linha é uma tensão de armadura (`caso 1.4` = Tabela 1, Va = 4 V; `caso 2.4` = a mesma Va com carga no gerador). Ligações: **CH1 na armadura (Va)**, **CH2 no tacômetro (Vt)**.
+
+| No prompt | O que acontece |
+|---|---|
+| `caso 1.4` / `n` | escolhe a linha (ou vai para a próxima) e diz o que medir, o valor esperado pelas linhas já medidas e a tela sugerida |
+| `preparar` | trigger em CH1 subindo a Va/2 e aquisição única (Single Seq): é só ligar a fonte |
+| `a` | lê a partida: Va, Vt (V't na Tabela 2) e τ (63,2 % a partir da subida de Va), compara com as outras linhas e rearma o osciloscópio |
+| `w=1020` | velocidade lida no tacômetro (rpm). Também `ig=120m` (A), `vt=2.95`, `vt'=2.47`, `va=4.02`, `tau=350m`; `w=-` apaga; `anotar 1.4 w 1020` anota em outra linha |
+| `ajustar` | mínimos quadrados: KKt (Vt × Va), K (ω × Va), Kt (Vt × ω, conferido com KKt/K), τ médio, K1Kt (V1t × ig) e K1 = K1Kt/Kt |
+| `tabela` | as duas tabelas da folha e as constantes, em `tabelas_exp8.md` |
+| `grafico 1` / `grafico 2` / `grafico partidas` | as retas da seção 3 e τ por linha / V1t × ig / uma partida por painel |
+| `projeto` | PI de velocidade (1000 rpm, T_r 15 % menor que em malha aberta) e PD/PID de posição (60°, M_p ≤ 20 %, T_p = τ por padrão: `projeto tp 300m`), simulados sem carga e com a carga entrando em degrau |
+
+O que é digitado vale mais que o que veio do osciloscópio. Na Tabela 2, Vt sem carga é o da Tabela 1 com a mesma Va, a não ser que seja anotado de novo. Pontos com o motor parado (zona morta) ficam fora das retas. A cada valor novo a sessão compara com a previsão das retas das outras linhas e marca `CONFERIR` se o ponto sair da reta.
+
+Projeto: o PI cancela o polo do motor (Ki/Kp = 1/τ), e Kp = 1/(0,85·K·Kt) deixa a malha fechada com τ_mf = 0,85·τ. O PD parte do 2ª ordem padrão (ζ do sobressinal, ω_n de T_p) e corrige Kp e Kd numericamente, porque o zero do PD aumenta o sobressinal; o alvo é 19 %, um ponto de folga. O PID é o PD com Ki = Kp·ω_n/10, para a carga não deixar erro em regime (o erro com carga sai do teorema do valor final).
+
+`python -m labscope.sessao.latex <sessão> <destino>/08` exporta as tabelas (1, 2, K de constantes e P de projeto), um gráfico por reta, as partidas, as simulações e os trechos de código.
+
+## Experimento 9 – controle do motor CC com perturbações
+
+Usa o motor identificado no Exp. 8. Cada linha é um controlador montado e a resposta ao degrau de referência: **CH1 na referência**, **CH2 no sensor** (tacômetro no PI, sensor de posição no PD/PID). Tabelas da folha: 1 PI sem carga (1000 rpm, T_r 15 % menor), 2 PD/PID sem carga (60°, M_p ≤ 20 %), 3 PI com Vg = 6 e 9 V, 4 PD/PID com Vg = 5 e 8 V; colunas τ, T_r, T_p, M_p e T_s.
+
+| No prompt | O que acontece |
+|---|---|
+| `modelo ref2022` | motor do Exp. 8 de 2022 (`labscope/dados`, outro grupo/ano: só referência); `modelo <pasta da sessão do Exp. 8>` usa a sua; `modelo K=211 Kt=5m tau=0,494 K1=9e6 igv=9u` digita |
+| `caso 3.1` / `n` | escolhe a linha e mostra ganhos, especificações, polos de malha aberta e fechada, a resposta prevista (τ, T_r, T_p, M_p, T_s, e_ss) e a tela sugerida |
+| `circuito` | R, R2, C1 e C2 do PI, PD ou PID analógico (calculados e das séries E24/E6) e os ganhos que os valores comerciais dão |
+| `preparar`, `a` | trigger em CH1 subindo no meio do degrau, aquisição única; `a` mede a resposta e compara com a prevista |
+| `lgr` | lugar das raízes com os polos de malha aberta (×) e de malha fechada (■) |
+| `tabela`, `grafico <1..4>` | as quatro tabelas (previsto onde falta captura) e as respostas medidas |
+| `set tipo pd\|pid\|auto`, `set tp`, `set vmax`, `set vgrau`, `set igv` | opções de projeto; por padrão T_p é o menor que não satura o amp-op (|Va| ≤ 10 V) e o PID entra nas linhas com carga |
+
+Hipóteses que a folha não fixa e que ficam como opção: a carga entra no mesmo instante do degrau, com `ig = Vg·igv` constante (`igv` sai da Tabela 2 do Exp. 8: ig por volt de Va), e o sensor de posição dá 0,1 V/° (só muda a escala da tela e os ganhos do circuito). `conectar sim` gera a previsão do modelo com ruído e 8 bits: serve para ensaiar a sessão, não é medida. `python -m labscope.sessao.latex <sessão> <destino>/09` exporta as quatro tabelas (medido e previsto), a tabela de projeto, as respostas, o lugar das raízes e o código.
+
 ## Arquitetura
 
 | Pacote | Classes |
 |---|---|
 | `circuitos` | `FT`; `Bloco` → `EstagioAmpOp` (`Somador`, `InversorRealimentacao`), `Controlador` (`ControladorP`, `ControladorPI`, `ControladorPID`, `ControladorIdeal`), `Planta` (`PlantaRC`, `PlantaRLC`); `MalhaFechada` |
 | `medidas` | `RespostaMedida`, `RespostaTeorica`; `Metrica` → `TempoSubida`, `InstantePico`, `Sobressinal`, `TempoAssentamento`, `ConstanteTempo`, `ValorFinal`, `ErroEstacionario`, `FatorAmortecimento`, `FrequenciaNatural`, `FrequenciaAmortecida` (e as variantes por decremento logarítmico), `GanhoProporcional`, `GanhoIntegral`, `GanhoDerivativo` |
-| `instrumentos` | `Osciloscopio` → `TektronixTBS`, `OsciloscopioArquivo`, `OsciloscopioSimulado`; `Transcricao` |
-| `roteiros` | `Roteiro` → `Experimento6`, `Experimento7`; `Caso`, `Tabela`, `Componentes` |
-| `sessao` | `SessaoLab` (prompt), `analisar` → `Resultado`, figuras e gravação |
+| `instrumentos` | `Osciloscopio` → `TektronixTBS`, `OsciloscopioArquivo`, `OsciloscopioSimulado`, `MotorSimulado`, `ControleSimulado`; `Transcricao` |
+| `roteiros` | `Roteiro` → `Experimento6`, `Experimento7`, `Experimento8`, `Experimento9`; `Caso`, `PontoMotor`, `CasoControle`, `Tabela`, `Componentes` |
+| `motor` | `MotorCC`, `Reta`, `Leitura`, `Identificacao`; `DegrauMotor`, `RespostaMalha` (Exp. 9), `previsao`; `componentes` (resistores e capacitores); `Projeto` → `ProjetoPI`, `ProjetoPD` → `ProjetoPID` |
+| `sessao` | `SessaoLab` (prompt) → `SessaoMotor` (Exp. 8) → `SessaoControle` (Exp. 9; a classe segue o `exp`), `analisar` → `Resultado`, `analisar_motor` → `ResultadoMotor`, figuras, gravação e exportação LaTeX |
 
 As classes abstratas definem o contrato e as concretas só preenchem o que muda:
 
