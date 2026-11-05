@@ -1,5 +1,26 @@
 # Changelog
 
+## v4 – 2026-10-29
+
+Experimento 10 (compensador avanço de fase). Ainda não usado em bancada.
+
+### Experimento 10
+
+- `Experimento10`: as sete tabelas da folha. Senoide nas Tabelas 1 (inversor, 500 Hz), 2 (compensador em malha aberta, 20 Hz a 5 kHz), 4 e 7 (malha RC e RLC, 100 Hz), com Vpp da saída e ângulo de fase; onda quadrada de 50 Hz nas Tabelas 3 (RC), 5 e 6 (RLC). `ComponentesAvanco` usa os nomes da folha (R1, C1, R2, C2, R3–R6, Rc, Cc, L1).
+- `CompensadorAvanco`: R1 ∥ C1 na entrada e R2 ∥ C2 na realimentação, com zero, polo, fase máxima e a frequência dela. `Inversor` de ganho −R_f/R_in.
+- `MalhaFechada(inversor_serie=...)`: a malha das Figuras 2 e 3, com o inversor no caminho direto e V_c voltando direto ao somador (saída invertida).
+- `RespostaMedida(invertida=True)` mede o degrau em −CH2; `RespostaTeorica` mede a forma do degrau previsto sem o sinal, e V_c e e_ss usam |ganho DC|.
+- `labscope.medidas.senoide`: `RespostaSenoidal` (frequência pelas subidas de CH1, ajuste de senoide nos dois canais: Vpp, |G| e fase), `PrevisaoSenoidal` (G(jω)) e `bode`.
+- `SessaoAvanco` (`exp 10`, `--exp 10`): `casos`, `teoria`, `adquirir` e `tabela` para os dois tipos de caso, `grafico` com o Bode e os pontos medidos, `lgr` nas malhas fechadas; `ajustar` recusado. O simulador (`conectar sim`) gera senoides em regime nos casos senoidais.
+- `analise_experimento10.md`: o que a folha pede, a função de transferência, as previsões de cada tabela e o que esperar na bancada.
+
+### Outros
+
+- `SessaoLab`: ganchos `_analise` e `_desenhar_painel`; `retomar` reanalisa só as capturas da mesma família; `set`, `comp` e `status` usam os componentes do caso (nomes do Exp. 10 também no atalho `Rc=980`).
+- O simulador volta à onda quadrada ao sair do Exp. 10.
+- A exportação LaTeX avisa que ainda não cobre o Exp. 10.
+- 144 → 155 testes.
+
 ## v3 — 2026-10-15
 
 Experimento 9 (controle do motor CC com perturbações) e revisão da análise do Exp. 8. Ainda não usado em bancada.

@@ -21,6 +21,19 @@ def linhas_componentes(roteiro, caso, comp):
     return linhas
 
 
+def ganhos_texto(controlador):
+    """'Kp = 1   Ki = 1000 1/s', ou o resumo próprio do controlador (o compensador do Exp. 10)."""
+    if hasattr(controlador, "resumo"):
+        return controlador.resumo()
+    g = controlador.ganhos()
+    partes = [f"Kp = {Rl.num(g['kp'], 2)}"]
+    if g["ki"]:
+        partes.append(f"Ki = {Rl.num(g['ki'], 0)} 1/s")
+    if g["kd"]:
+        partes.append(f"Kd = {Rl.num(g['kd'] * 1e3, 4)} ms")
+    return "   ".join(partes)
+
+
 @dataclass
 class Linha:
     metrica: object
@@ -61,13 +74,7 @@ class Resultado:
                 f"({self.caso.rotulo}) · {self.teoria.malha.descricao()}")
 
     def ganhos_texto(self):
-        g = self.teoria.malha.controlador.ganhos()
-        partes = [f"Kp = {Rl.num(g['kp'], 2)}"]
-        if g["ki"]:
-            partes.append(f"Ki = {Rl.num(g['ki'], 0)} 1/s")
-        if g["kd"]:
-            partes.append(f"Kd = {Rl.num(g['kd'] * 1e3, 4)} ms")
-        return "   ".join(partes)
+        return ganhos_texto(self.teoria.malha.controlador)
 
     def componentes_texto(self):
         return "  ".join(f"{self.roteiro.nome(k)} = {texto_si(getattr(self.comp, k), self.comp.UNIDADES[k])}"
@@ -173,7 +180,7 @@ def analisar(captura, roteiro, caso, comp=None, metricas=PADRAO, suavizacao=60e-
     if not math.isnan(tr):
         suavizacao = min(suavizacao, tr / 8)
     medida = RespostaMedida(captura, roteiro.frequencia, teoria.subida, teoria.malha.controlador.integral,
-                            suavizacao=suavizacao)
+                            suavizacao=suavizacao, invertida=teoria.ganho_dc < 0)
     linhas = []
     for m in metricas:
         if not m.aplicavel(teoria):

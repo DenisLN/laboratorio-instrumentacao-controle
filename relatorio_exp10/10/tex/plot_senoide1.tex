@@ -1,0 +1,29 @@
+% Cores validadas para daltonismo (Okabe-Ito); o traço também distingue as curvas na impressão P&B.
+\definecolor{cor-medido}{HTML}{0072B2}
+\definecolor{cor-teorico}{HTML}{D55E00}
+\definecolor{cor-carga}{HTML}{009E73}
+\begin{figure}[htbp]
+    \centering
+    \pgfplotslegendfromname{leg-sen1}\par\smallskip
+    \begin{tikzpicture}
+        \begin{groupplot}[
+            group style={group size=1 by 1, horizontal sep=1.8cm, vertical sep=2.3cm},
+            scale only axis, width=0.7\textwidth, height=0.2\textwidth,
+            xlabel={tempo (ms)}, ylabel={tensão (V)},
+            grid=major, grid style={gray!20},
+            title style={font=\small, at={(0,1)}, anchor=south west},
+            scaled ticks=false,
+            tick label style={font=\footnotesize, /pgf/number format/.cd, fixed, use comma, 1000 sep={\,}},
+            legend columns=3, legend style={font=\footnotesize, draw=none, /tikz/every even column/.append style={column sep=0.6em}},
+            unbounded coords=jump,
+        ]
+            \nextgroupplot[title={500\,Hz \quad (captura \#02)}, xmin=0, xmax=4.999, legend to name=leg-sen1]
+            \addplot[gray!80, thick] table[x=t, y=ch1, col sep=comma] {10/csv/senoide_t1_c1.1.csv}; \addlegendentry{entrada (CH1)}
+            \addplot[cor-medido, line width=1pt] table[x=t, y=ch2, col sep=comma] {10/csv/senoide_t1_c1.1.csv}; \addlegendentry{saída medida (CH2)}
+            \addplot[cor-teorico, dashed, line width=0.9pt] table[x=t, y=teo, col sep=comma] {10/csv/senoide_t1_c1.1.csv}; \addlegendentry{saída teórica}
+        \end{groupplot}
+    \end{tikzpicture}
+    \caption{Casos da Tabela~\ref{tab:tabela1}: entrada (CH1), saída medida (CH2) e saída prevista
+             pelo modelo para a mesma entrada.}
+    \label{fig:senoide1}
+\end{figure}

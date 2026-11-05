@@ -55,7 +55,7 @@ def painel(res, caminho, dpi=130):
     ax = fig.add_subplot(gs[:, 0])
     ax.plot(tt, m.u[a:b], color=G.CINZA, lw=1.2, label="entrada e1 (CH1)")
     ax.plot(tt, cap[m.canal_saida][a:b], color=G.CORES[0], lw=0.7, alpha=0.35)
-    ax.plot(tt, m.y[a:b], color=G.CORES[0], lw=1.6, label="Vc medido (CH2)")
+    ax.plot(tt, m.sinal * m.y[a:b], color=G.CORES[0], lw=1.6, label="Vc medido (CH2)")
     for teoria, estilo, rot in ((res.teoria, G.TRACEJADO, "teórico (roteiro)"),
                                 (res.teoria_carga, (0, (1, 1.5)), "modelo c/ carga de 10 kΩ")):
         if teoria.estavel:
@@ -64,7 +64,7 @@ def painel(res, caminho, dpi=130):
 
     # marcações das métricas medidas neste trecho (em tensão real, não espelhada)
     d = m.por_trecho[min(_trecho_para_mostrar(m), len(m.por_trecho) - 1)]
-    y0, yf = s * d["y0"], s * d["yf"]
+    y0, yf = m.sinal * s * d["y0"], m.sinal * s * d["yf"]
     ax.axhspan(yf - m.banda * (yf - y0), yf + m.banda * (yf - y0), color=G.CORES[0], alpha=0.10, lw=0)
     for chave, rot in (("tr", "Tr"), ("tp", "Tp"), ("ts", "Ts")):
         x = d[chave]
@@ -168,7 +168,7 @@ def grafico_tabela(tabela, resultados, caminho, dpi=160):
         tt = (m.t[a:b] - m.t[i]) * 1e3
         if entrada is None:
             entrada = (tt, m.u[a:b], "entrada e1 (CH1)")
-        curvas.append((tt, m.y[a:b], res.teoria.curva(m.t, m.entrada)[a:b], res.caso.rotulo, "teórico"))
+        curvas.append((tt, m.sinal * m.y[a:b], res.teoria.curva(m.t, m.entrada)[a:b], res.caso.rotulo, "teórico"))
     G.respostas(ax, entrada, curvas, f"Exp. {resultados[0].roteiro.numero} · Tabela {tabela.numero} – {tabela.titulo}")
     ax.set_xlim(min(c[0][0] for c in curvas), fim)
     ax.set_xlabel("tempo após a borda (ms)")

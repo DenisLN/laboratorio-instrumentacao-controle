@@ -21,6 +21,7 @@ class OsciloscopioSimulado(Osciloscopio):
         self.frequencia, self.amplitude = frequencia, amplitude
         self.s_div, self.pontos, self.v_div, self.ruido = s_div, pontos, v_div, ruido
         self.quantizar = quantizar
+        self.senoide = False        # True: o gerador em senoide (Exp. 10), saída em regime permanente
         self._rng = np.random.default_rng(semente)
 
     def conectar(self):
@@ -41,8 +42,13 @@ class OsciloscopioSimulado(Osciloscopio):
         dt = self.s_div * 10 / self.pontos
         self.registrar("--", f"simulação: {self.pontos} pontos a {self.s_div:g} s/div, {self.frequencia:g} Hz")
         t = dt * (np.arange(self.pontos) - self.pontos // 10)      # borda de subida a 1 divisão da esquerda
-        entrada = sinais.Quadrada(-self.amplitude, self.amplitude, 1 / self.frequencia, 0.0)
-        u, y = modelo.resposta_a_quadrada(*self.fonte().ft(), t, entrada, 3)
+        if self.senoide:
+            g = self.fonte().ft()(2j * np.pi * self.frequencia)
+            w = 2 * np.pi * self.frequencia
+            u, y = self.amplitude * np.sin(w * t), self.amplitude * abs(g) * np.sin(w * t + np.angle(g))
+        else:
+            entrada = sinais.Quadrada(-self.amplitude, self.amplitude, 1 / self.frequencia, 0.0)
+            u, y = modelo.resposta_a_quadrada(*self.fonte().ft(), t, entrada, 3)
         sinal = {"CH1": u, "CH2": y}
         # 4 divisões para cada lado do zero: o que passar disso sai cortado, como na tela
         meta = {c: {"Sample Interval": dt, "Record Length": self.pontos, "Vertical Scale": vd, "Source": c,

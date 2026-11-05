@@ -10,7 +10,7 @@ Dependências: `numpy`, `scipy`, `matplotlib` e, para a USB, `pyvisa` com uma bi
 python -m labscope
 ```
 
-ou dois cliques em `LAB.cmd`. Abre no Experimento 8 (motor CC, seção abaixo); `--exp 9` abre o controle do motor, `--exp 7` ou `--exp 6` começa nos roteiros com amp-op, e `exp <n>` troca no meio da sessão. Com `--sim` a sessão já abre ligada a um osciloscópio simulado (no Exp. 8, um motor simulado), para ensaiar sem hardware.
+ou dois cliques em `LAB.cmd`. Abre no Experimento 8 (motor CC, seção abaixo); `--exp 9` abre o controle do motor, `--exp 10` o compensador avanço de fase, `--exp 7` ou `--exp 6` começa nos roteiros com amp-op, e `exp <n>` troca no meio da sessão. Com `--sim` a sessão já abre ligada a um osciloscópio simulado (no Exp. 8, um motor simulado), para ensaiar sem hardware.
 
 Ligações: **CH1 = e₁** (saída do gerador), **CH2 = V_c**, cabo USB-B na traseira do osciloscópio.
 
@@ -103,16 +103,33 @@ Usa o motor identificado no Exp. 8. Cada linha é um controlador montado e a res
 
 Hipóteses que a folha não fixa e que ficam como opção: a carga entra no mesmo instante do degrau, com `ig = Vg·igv` constante (`igv` sai da Tabela 2 do Exp. 8: ig por volt de Va), e o sensor de posição dá 0,1 V/° (só muda a escala da tela e os ganhos do circuito). `conectar sim` gera a previsão do modelo com ruído e 8 bits: serve para ensaiar a sessão, não é medida. `python -m labscope.sessao.latex <sessão> <destino>/09` exporta as quatro tabelas (medido e previsto), a tabela de projeto, as respostas, o lugar das raízes e o código.
 
+## Experimento 10 – compensador avanço de fase
+
+O compensador é um amp-op com R1 ∥ C1 na entrada e R2 ∥ C2 na realimentação: G_c = (R2/R1)·(R1C1·s + 1)/(R2C2·s + 1). A folha tem dois tipos de tabela, e a sessão mede os dois com **CH1 no gerador** e **CH2 na saída**:
+
+- **Senoide** (Tabelas 1, 2, 4 e 7): Vpp da saída e ângulo de fase de CH2 em relação a CH1, por ajuste de senoide na frequência medida em CH1, comparados com G(jω). Casos 1.1 (inversor, 500 Hz), 2.1–2.6 (compensador em malha aberta, 20 Hz a 5 kHz), 4.1 (RC) e 7.1 (RLC), estes em 100 Hz.
+- **Degrau** (Tabelas 3, 5 e 6): onda quadrada de 50 Hz, como nos Exps. 6 e 7. Casos 3.1 (RC: τ, T_r, T_s, V_c) e 5.1 (RLC: T_r, T_p, M_p, T_s, V_c e ζ, ω_n, ω_d).
+
+| No prompt | O que acontece |
+|---|---|
+| `caso 2.3`, `t` | zero, polo e fase máxima do compensador; G(jω), Vpp e fase previstos, ou a resposta ao degrau |
+| `a` | senoide: Vpp de entrada e saída, \|G\| e fase; degrau: as métricas de sempre |
+| `grafico 2` (ou 1, 4, 7) | Bode teórico com os pontos medidos; nas Tabelas 3 e 5, as respostas |
+| `lgr [componente]` | lugar das raízes das malhas fechadas (3.1, 4.1, 5.1, 7.1), variando R2 por padrão |
+| `set Rc 980`, `L1=75m` | valores reais, com os nomes da folha (R, R1, C1, R2, C2, R3, R4, R5, R6, Rc, Cc, L1) |
+
+Nas Figuras 2 e 3, V_c volta direto ao somador e o inversor R5/R6 fica entre o compensador e a planta: a saída sai **invertida** (fase perto de 180° em 100 Hz) e as métricas do degrau são tiradas de −CH2. `ajustar` (K_p, K_i, K_d) não se aplica, e a exportação LaTeX ainda não cobre o Exp. 10. Previsões e o que esperar na bancada: `analise_experimento10.md`.
+
 ## Arquitetura
 
 | Pacote | Classes |
 |---|---|
-| `circuitos` | `FT`; `Bloco` → `EstagioAmpOp` (`Somador`, `InversorRealimentacao`), `Controlador` (`ControladorP`, `ControladorPI`, `ControladorPID`, `ControladorIdeal`), `Planta` (`PlantaRC`, `PlantaRLC`); `MalhaFechada` |
-| `medidas` | `RespostaMedida`, `RespostaTeorica`; `Metrica` → `TempoSubida`, `InstantePico`, `Sobressinal`, `TempoAssentamento`, `ConstanteTempo`, `ValorFinal`, `ErroEstacionario`, `FatorAmortecimento`, `FrequenciaNatural`, `FrequenciaAmortecida` (e as variantes por decremento logarítmico), `GanhoProporcional`, `GanhoIntegral`, `GanhoDerivativo` |
+| `circuitos` | `FT`; `Bloco` → `EstagioAmpOp` (`Somador`, `Inversor`, `InversorRealimentacao`), `Controlador` (`ControladorP`, `ControladorPI`, `ControladorPID`, `ControladorIdeal`, `CompensadorAvanco`), `Planta` (`PlantaRC`, `PlantaRLC`); `MalhaFechada` |
+| `medidas` | `RespostaMedida`, `RespostaTeorica`; `Metrica` → `TempoSubida`, `InstantePico`, `Sobressinal`, `TempoAssentamento`, `ConstanteTempo`, `ValorFinal`, `ErroEstacionario`, `FatorAmortecimento`, `FrequenciaNatural`, `FrequenciaAmortecida` (e as variantes por decremento logarítmico), `GanhoProporcional`, `GanhoIntegral`, `GanhoDerivativo`; `RespostaSenoidal`, `PrevisaoSenoidal` (Exp. 10) |
 | `instrumentos` | `Osciloscopio` → `TektronixTBS`, `OsciloscopioArquivo`, `OsciloscopioSimulado`, `MotorSimulado`, `ControleSimulado`; `Transcricao` |
-| `roteiros` | `Roteiro` → `Experimento6`, `Experimento7`, `Experimento8`, `Experimento9`; `Caso`, `PontoMotor`, `CasoControle`, `Tabela`, `Componentes` |
+| `roteiros` | `Roteiro` → `Experimento6`, `Experimento7`, `Experimento8`, `Experimento9`, `Experimento10`; `Caso`, `PontoMotor`, `CasoControle`, `CasoAvanco`, `Tabela`, `Componentes`, `ComponentesAvanco` |
 | `motor` | `MotorCC`, `Reta`, `Leitura`, `Identificacao`; `DegrauMotor`, `RespostaMalha` (Exp. 9), `previsao`; `componentes` (resistores e capacitores); `Projeto` → `ProjetoPI`, `ProjetoPD` → `ProjetoPID` |
-| `sessao` | `SessaoLab` (prompt) → `SessaoMotor` (Exp. 8) → `SessaoControle` (Exp. 9; a classe segue o `exp`), `analisar` → `Resultado`, `analisar_motor` → `ResultadoMotor`, figuras, gravação e exportação LaTeX |
+| `sessao` | `SessaoLab` (prompt) → `SessaoMotor` (Exp. 8) → `SessaoControle` (Exp. 9), `SessaoLab` → `SessaoAvanco` (Exp. 10; a classe segue o `exp`), `analisar` → `Resultado`, `analisar_motor` → `ResultadoMotor`, figuras, gravação e exportação LaTeX |
 
 As classes abstratas definem o contrato e as concretas só preenchem o que muda:
 

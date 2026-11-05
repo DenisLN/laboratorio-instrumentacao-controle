@@ -2,3 +2,8 @@ __pycache__/
 .pytest_cache/
 sessoes/
 .obsidian/workspace.json
+relatorio_exp10/teste_compilacao.*
+relatorio_exp10/*.png
+fila_cli.txt
+
+.serena/

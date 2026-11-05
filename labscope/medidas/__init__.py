@@ -5,12 +5,14 @@
   tempo   Tr, Tp, Mp, Ts, τ, Vc, e_ss e a amplitude da entrada
   modal   ζ, ω_n, ω_d (pelo método do roteiro e pelo decremento logarítmico)
   ganhos  K_p, K_i, K_d identificados por ajuste à forma de onda
+  senoide Vpp e fase em regime senoidal (Exp. 10)
 """
 from .base import Comparacao, Metrica
 from .ganhos import GanhoDerivativo, GanhoIntegral, GanhoProporcional, Identificacao, ganhos
 from .modal import (FatorAmortecimento, FatorAmortecimentoDecremento, FrequenciaAmortecida,
                     FrequenciaAmortecidaDecremento, FrequenciaNatural, FrequenciaNaturalDecremento)
 from .resposta import RespostaMedida, RespostaTeorica
+from .senoide import PrevisaoSenoidal, RespostaSenoidal, bode
 from .tempo import (AmplitudeEntrada, ConstanteTempo, ErroEstacionario, InstantePico, Sobressinal,
                     TempoAssentamento, TempoSubida, ValorFinal)
 
@@ -26,4 +28,4 @@ __all__ = ["Metrica", "Comparacao", "RespostaMedida", "RespostaTeorica", "PADRAO
            "Sobressinal", "TempoAssentamento", "ValorFinal", "ErroEstacionario", "FatorAmortecimento",
            "FrequenciaNatural", "FrequenciaAmortecida", "FatorAmortecimentoDecremento",
            "FrequenciaNaturalDecremento", "FrequenciaAmortecidaDecremento", "GanhoProporcional",
-           "GanhoIntegral", "GanhoDerivativo"]
+           "GanhoIntegral", "GanhoDerivativo", "RespostaSenoidal", "PrevisaoSenoidal", "bode"]

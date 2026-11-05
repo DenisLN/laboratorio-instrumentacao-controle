@@ -75,6 +75,20 @@ class Somador(EstagioAmpOp):
 
 
 @dataclass(frozen=True)
+class Inversor(EstagioAmpOp):
+    """Inversor de ganho −R_f/R_in (no Exp. 10, R5/R6 entre o compensador e a
+    planta e R3/R4 na saída do compensador em malha aberta)."""
+    R_entrada: float = 10e3
+    R_realimentacao: float = 10e3
+
+    def z_entrada(self):
+        return resistor(self.R_entrada)
+
+    def z_realimentacao(self):
+        return resistor(self.R_realimentacao)
+
+
+@dataclass(frozen=True)
 class InversorRealimentacao(EstagioAmpOp):
     """Amp-op 3: devolve −V_c ao somador. O resistor de entrada termina em um
     terra virtual, então a planta o enxerga como uma carga R sobre o capacitor."""

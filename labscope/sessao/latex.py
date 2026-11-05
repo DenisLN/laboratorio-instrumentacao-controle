@@ -397,6 +397,9 @@ def exportar(sessao, destino, prefixo=None):
     if s.roteiro.familia == "controle":
         from .latex_controle import exportar as exportar_controle
         return exportar_controle(s, destino, prefixo)
+    if s.roteiro.familia == "avanco":
+        from .latex_avanco import exportar as exportar_avanco
+        return exportar_avanco(s, destino, prefixo)
     for sub in ("csv", "tab", "tex", "cod"):
         (destino / sub).mkdir(parents=True, exist_ok=True)
     por_caso = {cid: res for (_, cid), res in s.resultados.items()}

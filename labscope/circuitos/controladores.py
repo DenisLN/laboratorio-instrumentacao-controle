@@ -1,9 +1,11 @@
-"""Controladores P, PI e PID montados no amp-op 2 e o controlador ideal de ganhos dados.
+"""Controladores P, PI, PID e o compensador avanço de fase montados no amp-op 2, e o
+controlador ideal de ganhos dados.
 
 No amp-op 2, G_c(s) = Z_f/Z_in (o sinal do estágio inversor se cancela com o do
 somador). Cada controlador só declara as duas impedâncias e, em fórmula
 fechada, os ganhos K_p, K_i e K_d que resultam delas.
 """
+import math
 from abc import abstractmethod
 from dataclasses import dataclass
 
@@ -114,3 +116,52 @@ class ControladorPID(ControladorPI):
 
     kp = property(lambda self: self.R2 / self.R + self.C1 / self.C2)
     kd = property(lambda self: self.R2 * self.C1)
+
+
+@dataclass(frozen=True)
+class CompensadorAvanco(ControladorAmpOp):
+    """Experimento 10: Z_in = R₁ ∥ C₁, Z_f = R₂ ∥ C₂.
+
+    G_c = (R₂/R₁)·(R₁C₁·s + 1)/(R₂C₂·s + 1): zero em −1/(R₁C₁), polo em −1/(R₂C₂).
+    É avanço de fase quando o zero vem antes do polo (R₁C₁ > R₂C₂). Não é um
+    PID: K_p aqui é o ganho DC R₂/R₁, e K_i = K_d = 0.
+    """
+    R1: float
+    C1: float
+    R2: float
+    C2: float
+    nome = "avanço"
+
+    def z_entrada(self):
+        return paralelo(resistor(self.R1), capacitor(self.C1))
+
+    def z_realimentacao(self):
+        return paralelo(resistor(self.R2), capacitor(self.C2))
+
+    kp = property(lambda self: self.R2 / self.R1)
+    ki = property(lambda self: 0.0)
+    kd = property(lambda self: 0.0)
+
+    @property
+    def zero(self):
+        return -1 / (self.R1 * self.C1)
+
+    @property
+    def polo(self):
+        return -1 / (self.R2 * self.C2)
+
+    @property
+    def w_max(self):
+        """Frequência (rad/s) da fase máxima: média geométrica do zero e do polo."""
+        return math.sqrt(self.zero * self.polo)
+
+    @property
+    def fase_maxima(self):
+        """Fase máxima em graus (negativa se o polo vem antes do zero: atraso)."""
+        a = self.zero / self.polo          # (R₂C₂)/(R₁C₁) < 1 no avanço
+        return math.degrees(math.asin((1 - a) / (1 + a)))
+
+    def resumo(self):
+        n = lambda x, f: format(x, f).replace(".", ",")
+        return (f"K = R2/R1 = {n(self.kp, '.3g')}   zero = {n(self.zero, '.4g')} rad/s   polo = {n(self.polo, '.4g')} rad/s"
+                f"   fase máxima = {n(self.fase_maxima, '.1f')}° em {n(self.w_max / (2 * math.pi), '.4g')} Hz")

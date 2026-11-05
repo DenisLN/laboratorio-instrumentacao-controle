@@ -65,7 +65,7 @@ class ValorFinal(Metrica):
         return medida.lsb       # Vc sai de dois patamares quantizados
 
     def prever(self, teoria):
-        return teoria.amplitude * teoria.ganho_dc
+        return teoria.amplitude * abs(teoria.ganho_dc)
 
 
 class ErroEstacionario(Metrica):
@@ -80,4 +80,4 @@ class ErroEstacionario(Metrica):
         return 2 * medida.lsb / medida.amplitude
 
     def prever(self, teoria):
-        return 1 - teoria.ganho_dc if teoria.estavel else math.nan
+        return 1 - abs(teoria.ganho_dc) if teoria.estavel else math.nan

@@ -12,9 +12,12 @@ import argparse
 import datetime as dt
 import json
 import math
+import queue
 import re
 import subprocess
 import sys
+import threading
+import time
 import traceback
 from pathlib import Path
 
@@ -27,9 +30,9 @@ from ..instrumentos import (ErroInstrumento, OsciloscopioArquivo, OsciloscopioSi
                             base_de_tempo, dica_de_usb, dispositivos_usb_tektronix, ler_arquivo,
                             osciloscopio_usb, recursos_visa)
 from ..medidas import METRICAS, RespostaTeorica
-from ..roteiros import ROTEIROS, Componentes, texto_si, valor_si
+from ..roteiros import ROTEIROS, Componentes, ComponentesAvanco, texto_si, valor_si
 from . import painel
-from .analise import analisar, linhas_componentes
+from .analise import analisar, ganhos_texto, linhas_componentes
 from .armazenamento import PastaSessao
 
 AJUDA = """
@@ -40,7 +43,7 @@ Comandos (entre parênteses, o atalho):
                                 "sim" usa um osciloscópio simulado; uma pasta (ex.: E:\\NEW_FOL)
                                 lê as capturas ALLnnnn do pendrive.
   recursos                      Lista os recursos VISA que o computador enxerga agora.
-  exp <6|7|8|9>                   Troca de roteiro (nos 8 e 9, 'help' mostra os comandos do motor/controle).
+  exp <6..10>                   Troca de roteiro (nos 8, 9 e 10, 'help' mostra os comandos próprios).
   casos                         Lista os casos do roteiro e quais já foram medidos.
   caso <id>                     Escolhe o circuito montado (ex.: caso 1.2 = Tabela 1, 2ª linha).
   teoria (t)                    Ganhos, função de transferência, polos e métricas previstas.
@@ -88,11 +91,13 @@ def comando_terminal_diagnostico(caminho_log):
 
 
 def classe_da_sessao(experimento):
-    """A sessão de cada família de roteiro: circuitos com amp-op (Exps. 6 e 7) ou
-    o motor CC (Exp. 8) ou o seu controle (Exp. 9)."""
-    from .controle import SessaoControle    # aqui dentro: motor e controle importam este módulo
+    """A sessão de cada família de roteiro: circuitos com amp-op (Exps. 6 e 7),
+    o motor CC (Exp. 8), o seu controle (Exp. 9) ou o compensador avanço de fase (Exp. 10)."""
+    from .avanco import SessaoAvanco        # aqui dentro: estes módulos importam este
+    from .controle import SessaoControle
     from .motor import SessaoMotor
-    return {"motor": SessaoMotor, "controle": SessaoControle}.get(ROTEIROS[experimento].familia, SessaoLab)
+    return {"motor": SessaoMotor, "controle": SessaoControle,
+            "avanco": SessaoAvanco}.get(ROTEIROS[experimento].familia, SessaoLab)
 
 
 class SessaoLab:
@@ -154,7 +159,7 @@ class SessaoLab:
     def _pico_previsto(self):
         """Maior |V_c| esperado, em volts: patamar mais o sobressinal do pior dos dois modelos."""
         mp = [t.degrau["mp"] for t in self._teorias() if not math.isnan(t.degrau["mp"])]
-        return self.roteiro.amplitude * max(t.ganho_dc for t in self._teorias()) * (1 + 2 * max(mp, default=0.0))
+        return self.roteiro.amplitude * max(abs(t.ganho_dc) for t in self._teorias()) * (1 + 2 * max(mp, default=0.0))
 
     def _v_div_sugerido(self):
         """Menor V/div (sequência 1–2–5) em que o pico previsto fica dentro de 3,5 divisões."""
@@ -255,21 +260,19 @@ class SessaoLab:
         efetivo = self.comp()
         for k in self.caso.usados:
             nominal, real = getattr(self.caso.comp, k), getattr(efetivo, k)
-            u = Componentes.UNIDADES[k]
+            u = efetivo.UNIDADES[k]
             troca = f"   <- em uso: {texto_si(real, u)}" if real != nominal else ""
             print(f"  {self.roteiro.nome(k):<3} = {texto_si(nominal, u)} (nominal){troca}")
 
     def cmd_teoria(self, _args):
         teo, carga = self._teorias()
         malha = teo.malha
-        g = malha.controlador.ganhos()
         comp = self.comp()
         print(f"  Exp. {self.roteiro.numero} · Tabela {self.caso.tabela} · caso {self.caso.id} "
               f"({self.caso.rotulo}) · {malha.descricao()}")
         for linha in linhas_componentes(self.roteiro, self.caso, comp):
             print(f"    {linha}")
-        print(f"  Kp = {Rl.num(g['kp'], 2)}   Ki = {Rl.num(g['ki'], 0)} 1/s   Kd = {Rl.num(g['kd'] * 1e3, 4)} ms"
-              f"   (sistema tipo {malha.tipo}, ordem {malha.ordem})")
+        print(f"  {ganhos_texto(malha.controlador)}   (sistema tipo {malha.tipo}, ordem {malha.ordem})")
         print(f"  Vc/E1 = {teo.ft}")
         polo = lambda p: (Rl.num(p.real, 0) if abs(p.imag) < 1e-6 else
                           f"{Rl.num(p.real, 0)} ± j{Rl.num(abs(p.imag), 0)}")
@@ -312,12 +315,12 @@ class SessaoLab:
             self.suavizacao = valor_si(valor)
             print(f"  média móvel de {texto_si(self.suavizacao, 's')} em CH2 (vale a partir do próximo cálculo)")
             return
-        k = Componentes.chave(chave)
+        k = type(self.caso.comp).chave(chave)
         nominal, real = getattr(self.caso.comp, k), valor_si(valor)
         if real <= 0:
             raise ValueError("o valor tem de ser positivo")
         self.reais[(k, nominal)] = real
-        u = Componentes.UNIDADES[k]
+        u = self.caso.comp.UNIDADES[k]
         print(f"  {self.roteiro.nome(k)}: nominal {texto_si(nominal, u)} -> em uso {texto_si(real, u)} "
               f"(vale para todo caso com esse nominal; 'calcular' refaz a última captura)")
 
@@ -355,8 +358,8 @@ class SessaoLab:
                 continue                                   # sem análise ou descartada: só entra na numeração
             dados = json.loads((p / "metricas.json").read_text(encoding="utf-8"))
             roteiro = ROTEIROS[dados["experimento"]]()
-            if roteiro.familia != "malha":
-                continue                                   # captura do motor: é da SessaoMotor
+            if roteiro.familia != self.roteiro.familia:
+                continue                                   # captura de outra família: é de outra sessão
             caso = roteiro.caso(dados["caso"])
             for k, real in dados["componentes"].items():   # o valor real vale para todo caso com o mesmo nominal
                 nominal = getattr(caso.comp, k)
@@ -369,11 +372,12 @@ class SessaoLab:
                 if self.sonda:
                     captura = captura.com_sonda(self.sonda)
                 comp = caso.comp.trocar(**dados["componentes"])
-                res = analisar(captura, roteiro, caso, comp, suavizacao=self.suavizacao, numero=n)
+                res = self._analise(captura, roteiro, caso, comp, n)
             except Exception as exc:
                 falhas.append(f"#{n:02d} ({exc})")
                 continue
-            res.ganhos_id = dados.get("ganhos_identificados")
+            if hasattr(res, "ganhos_id"):
+                res.ganhos_id = dados.get("ganhos_identificados")
             resultados[(roteiro.numero, caso.id)] = res
             ultimo = res
         self.pasta.caminho = pasta
@@ -445,15 +449,22 @@ class SessaoLab:
         """Analisa, grava, mostra a tabela e abre o painel."""
         if self.sonda:
             captura = captura.com_sonda(self.sonda)
-        res = analisar(captura, self.roteiro, self.caso, self.comp(), suavizacao=self.suavizacao, numero=numero)
+        res = self._analise(captura, self.roteiro, self.caso, self.comp(), numero)
         self.resultados = {k: v for k, v in self.resultados.items() if v.numero != numero}
         self.resultados[(self.roteiro.numero, self.caso.id)] = res
         self.ultimo = res
         print(res.texto())          # as contas aparecem mesmo que gravar em disco dê problema
         pasta = self.pasta.salvar(res)
         print(f"  salvo em {pasta}")
-        self._mostrar(self._figura(lambda caminho: painel.painel(res, caminho), pasta / "painel.png"))
+        self._mostrar(self._figura(lambda caminho: self._desenhar_painel(res, caminho), pasta / "painel.png"))
         return res
+
+    def _analise(self, captura, roteiro, caso, comp, numero):
+        return analisar(captura, roteiro, caso, comp, suavizacao=self.suavizacao, numero=numero)
+
+    @staticmethod
+    def _desenhar_painel(res, caminho):
+        return painel.painel(res, caminho)
 
     @staticmethod
     def _figura(desenhar, caminho):
@@ -501,6 +512,7 @@ class SessaoLab:
         self._exigir_scope()
         if isinstance(self.scope, OsciloscopioSimulado):
             self.scope.frequencia, self.scope.amplitude = self.roteiro.frequencia, self.roteiro.amplitude
+            self.scope.senoide = False
             self.scope.s_div = self._s_div_sugerido()
             self.scope.v_div = (0.2, self._v_div_sugerido())
         if isinstance(self.scope, OsciloscopioArquivo) and args:
@@ -616,8 +628,8 @@ class SessaoLab:
             print("  osciloscópio: não conectado")
         else:
             print(f"  osciloscópio: {self.scope.nome} {getattr(self.scope, 'idn', '')}".rstrip())
-        trocas = ", ".join(f"{k} {texto_si(n, Componentes.UNIDADES[k])} -> {texto_si(r, Componentes.UNIDADES[k])}"
-                           for (k, n), r in self.reais.items())
+        u = self.caso.comp.UNIDADES
+        trocas = ", ".join(f"{k} {texto_si(n, u.get(k, ''))} -> {texto_si(r, u.get(k, ''))}" for (k, n), r in self.reais.items())
         print(f"  componentes trocados: {trocas or 'nenhum'}")
         print(f"  capturas: {self.numero}   casos medidos: {len(self.resultados)}   pasta: {self.pasta.caminho}")
         print(f"  diagnostico: {'ON' if self.diagnostico else 'OFF'}   abrir figuras: "
@@ -640,12 +652,13 @@ class SessaoLab:
     def _separar(linha):
         """Palavras da linha. Sem nenhum espaço (teclado sem barra de espaço),
         vale separar com vírgula ou '=' e colar o número no comando:
-        'caso1.2', 'grafico1', 'set,L,68m', 'L=68m'."""
+        'caso1.2', 'grafico1', 'set,L,68m', 'L=68m', 'Rc=1k'."""
         partes = linha.split()
         if len(partes) != 1:
             return partes
         partes = [p for p in re.split(r"[,=]", linha) if p]
-        if len(partes) == 2 and partes[0].upper() in set(Componentes.UNIDADES) | set(Componentes.APELIDOS):
+        nomes = {n.upper() for n in (*Componentes.UNIDADES, *Componentes.APELIDOS, *ComponentesAvanco.UNIDADES)}
+        if len(partes) == 2 and partes[0].upper() in nomes:
             return ["set"] + partes        # 'L=68m' é 'set L 68m'
         colado = re.fullmatch(r"([^\W\d_]+)(\d.*)", partes[0])
         if colado:
@@ -682,15 +695,67 @@ class SessaoLab:
     def prompt(self):
         return f"lab[e{self.roteiro.numero} c{self.caso.id}]> "
 
-    def loop(self):
+    def _linhas_externas(self, fila_arquivo):
+        """Fila de linhas vindas do teclado e, se houver, de um arquivo acompanhado (`--fila`):
+        quem escrever linhas no arquivo digita na sessão, sem tirar o teclado."""
+        fila = queue.Queue()
+
+        def teclado():
+            while True:
+                try:
+                    fila.put(input(self.prompt()))
+                    self._liberado.wait()
+                    self._liberado.clear()
+                except (EOFError, KeyboardInterrupt):
+                    fila.put(None)
+                    return
+
+        def arquivo():
+            caminho = Path(fila_arquivo)
+            caminho.touch()
+            with open(caminho, encoding="utf-8") as f:
+                f.seek(0, 2)
+                while True:
+                    linha = f.readline()
+                    if linha.endswith("\n"):
+                        fila.put(("arquivo", linha.strip()))
+                    else:
+                        time.sleep(0.2)
+
+        self._liberado = threading.Event()
+        threading.Thread(target=teclado, daemon=True).start()
+        if fila_arquivo:
+            threading.Thread(target=arquivo, daemon=True).start()
+        return fila
+
+    def loop(self, fila_arquivo=None):
         print(f"labscope – Experimento {self.roteiro.numero}, caso {self.caso.id}. 'help' lista os comandos.")
+        if not fila_arquivo:
+            while True:
+                try:
+                    linha = input(self.prompt())
+                except (EOFError, KeyboardInterrupt):
+                    print()
+                    break
+                if not self.executar(linha.strip()):
+                    break
+            self.encerrar()
+            return
+        fila = self._linhas_externas(fila_arquivo)
         while True:
-            try:
-                linha = input(self.prompt())
-            except (EOFError, KeyboardInterrupt):
+            item = fila.get()
+            if item is None:
                 print()
                 break
-            if not self.executar(linha.strip()):
+            if isinstance(item, tuple):          # veio do arquivo: mostra o que foi "digitado"
+                linha = item[1]
+                print(f"\r{self.prompt()}{linha}")
+            else:
+                linha = item.strip()
+            continuar = self.executar(linha)
+            if not isinstance(item, tuple):
+                self._liberado.set()
+            if not continuar:
                 break
         self.encerrar()
 
@@ -708,6 +773,7 @@ def main(argv=None):
     ap.add_argument("--sem-abrir", action="store_true", help="não abre as figuras no visualizador")
     ap.add_argument("--pasta", default="sessoes", help="onde gravar as sessões (padrão: ./sessoes)")
     ap.add_argument("-c", dest="comandos", help="roda os comandos separados por ';' e sai")
+    ap.add_argument("--fila", help="arquivo acompanhado: cada linha nova escrita nele é executada como se fosse digitada")
     args = ap.parse_args(argv)
     for fluxo in (sys.stdout, sys.stderr):
         # fora de um console (saída redirecionada) o padrão do Windows é cp1252, que não tem ζ nem ω
@@ -722,7 +788,7 @@ def main(argv=None):
                 break
         sessao.encerrar()
         return 0
-    sessao.loop()
+    sessao.loop(args.fila)
     return 0
 
 

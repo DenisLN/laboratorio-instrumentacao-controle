@@ -1,0 +1,22 @@
+\begin{table}[htbp]
+    \centering
+    \setcounter{table}{1}% mesmo número da tabela do roteiro
+    \renewcommand{\arraystretch}{1.35}\setlength{\tabcolsep}{5pt}
+    \begin{tabular}{l@{\hspace{1.6em}}r@{\hspace{1.6em}}rr@{\hspace{1.6em}}rr@{\hspace{1.6em}}rr}
+        \toprule
+        & & \multicolumn{2}{c}{$V_{pp}$ da saída (V)} & \multicolumn{2}{c}{$|G|$} & \multicolumn{2}{c}{fase ($^\circ$)} \\
+        \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
+        caso & $V_{pp}$ entrada (V) & exp. & \textcolor{black!55}{prev.} & exp. & teór. & exp. & teór. \\
+        \midrule
+        20\,Hz & 1,003 & 0,296 & \textcolor{black!55}{0,300} & 0,295 & 0,299 & 48,3 & 49,3 \\
+        100\,Hz & 0,998 & 1,049 & \textcolor{black!55}{1,072} & 1,051 & 1,073 & 53,5 & 50,3 \\
+        300\,Hz & 0,994 & 1,964 & \textcolor{black!55}{1,758} & 1,976 & 1,768 & 31,2 & 25,4 \\
+        1\,kHz & 0,945 & 2,257 & \textcolor{black!55}{1,867} & 2,388 & 1,975 & 9,0 & 8,3 \\
+        3\,kHz & 0,713 & 1,629 & \textcolor{black!55}{1,425} & 2,283 & 1,997 & $-$2,7 & 2,8 \\
+        5\,kHz & 0,529 & 1,153 & \textcolor{black!55}{1,058} & 2,179 & 1,999 & $-$8,0 & 1,7 \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip{\footnotesize Previsto de $V_{pp}$ da saída: $|G|$ teórico $\times$ $V_{pp}$ de entrada medido em CH1. Fase de CH2 em relação a CH1, pelo ajuste de senoide.}
+    \caption{Compensador avanço de fase ($C_{1}$ = 1 $\mu$F, $C_{2}$ = 100 nF, $R_{1}$ = 12 k$\Omega$, $R_{2}$ = 10 k$\Omega$, $R_{3}$ = 50 k$\Omega$, $R_{4}$ = 10 k$\Omega$, senoide de 2\,V$_{pp}$).}
+    \label{tab:tabela2}
+\end{table}

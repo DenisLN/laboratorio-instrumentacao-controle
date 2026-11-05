@@ -1,0 +1,17 @@
+\begin{table}[htbp]
+    \centering
+    \setcounter{table}{0}% mesmo número da tabela do roteiro
+    \renewcommand{\arraystretch}{1.35}\setlength{\tabcolsep}{5pt}
+    \begin{tabular}{l@{\hspace{1.6em}}r@{\hspace{1.6em}}rr@{\hspace{1.6em}}rr@{\hspace{1.6em}}rr}
+        \toprule
+        & & \multicolumn{2}{c}{$V_{pp}$ da saída (V)} & \multicolumn{2}{c}{$|G|$} & \multicolumn{2}{c}{fase ($^\circ$)} \\
+        \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
+        caso & $V_{pp}$ entrada (V) & exp. & \textcolor{black!55}{prev.} & exp. & teór. & exp. & teór. \\
+        \midrule
+        500\,Hz & 2,006 & 2,009 & \textcolor{black!55}{2,006} & 1,002 & 1,000 & 179,9 & 180,0 \\
+        \bottomrule
+    \end{tabular}
+    \par\smallskip{\footnotesize Previsto de $V_{pp}$ da saída: $|G|$ teórico $\times$ $V_{pp}$ de entrada medido em CH1. Fase de CH2 em relação a CH1, pelo ajuste de senoide.}
+    \caption{Circuito inversor ($R_{3}$ = $R_{4}$ = 10 k$\Omega$, senoide de 500 Hz, 2\,V$_{pp}$).}
+    \label{tab:tabela1}
+\end{table}

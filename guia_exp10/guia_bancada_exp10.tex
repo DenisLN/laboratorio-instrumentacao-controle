@@ -1,0 +1,539 @@
+% Guia de bancada do Experimento 10 (compensador avanço de fase).
+% Compilar: pdflatex guia_bancada_exp10.tex
+\documentclass[10pt]{article}
+\usepackage[a4paper,landscape,margin=1.1cm,top=0.9cm,bottom=0.9cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern,textcomp,amssymb}
+\usepackage[scaled]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[american]{circuitikz}
+\usetikzlibrary{fit,backgrounds,calc,positioning,arrows.meta,shapes.misc}
+\usepackage{xcolor,colortbl,array,tabularx,booktabs,multicol,enumitem}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlist{nosep,leftmargin=1.1em}
+
+% ------------------------------------------------------------------ cores (Okabe-Ito: seguras para daltonismo)
+\definecolor{gen}{HTML}{555555}      % gerador
+\definecolor{som}{HTML}{0072B2}      % somador (azul)
+\definecolor{comp}{HTML}{E69F00}     % compensador (laranja)
+\definecolor{inv}{HTML}{009E73}      % inversor (verde)
+\definecolor{pl}{HTML}{D55E00}       % planta (vermelho)
+\definecolor{med}{HTML}{CC79A7}      % pontas do osciloscópio (rosa)
+\definecolor{troca}{HTML}{F0E442}    % trocar desde a montagem anterior (amarelo)
+\colorlet{compd}{comp!75!black}      % laranja mais escuro para texto
+
+% faixas dos resistores
+\definecolor{preto}{HTML}{111111}  \definecolor{marrom}{HTML}{7B3F00}
+\definecolor{vermelho}{HTML}{D7191C} \definecolor{laranja}{HTML}{FF8C00}
+\definecolor{amarelo}{HTML}{FFD700} \definecolor{verde}{HTML}{1A9641}
+\definecolor{violeta}{HTML}{8E44AD} \definecolor{branco}{HTML}{FAFAFA}
+\definecolor{dourado}{HTML}{C9A227}
+
+% ------------------------------------------------------------------ macros
+% rótulo de componente no esquema: nome em negrito, valor grande
+\newcommand{\cv}[2]{\mbox{$\mathbf{#1}$\,=\,\textbf{\large #2}}}
+% o mesmo, destacado em amarelo: trocar este componente
+\newcommand{\tv}[2]{\mbox{\colorbox{troca}{$\mathbf{#1}$\,=\,\textbf{\large #2}}}}
+\newcommand{\kO}[1]{#1\,k\ensuremath{\Omega}}
+% resistor com faixas: \faixas{c1}{c2}{multiplicador}
+\newcommand{\faixas}[3]{\tikz[baseline=-0.6ex]{%
+  \draw[fill=yellow!15!brown!25, rounded corners=1.5pt] (0,-0.12) rectangle (0.9,0.12);
+  \foreach \x/\c in {0.15/#1,0.3/#2,0.45/#3,0.72/dourado}{\fill[\c] (\x,-0.12) rectangle ++(0.07,0.24);}
+  \draw[rounded corners=1.5pt] (0,-0.12) rectangle (0.9,0.12);}}
+% chip de cor de bloco
+\newcommand{\chip}[1]{\tikz[baseline=-0.6ex]\fill[#1] (0,-0.13) rectangle (0.32,0.13);}
+\newcommand{\num}[1]{\tikz[baseline=(n.base)]\node[circle, draw, line width=0.7pt, inner sep=0.6pt, font=\bfseries\scriptsize] (n) {#1};}
+\newcommand{\novo}{\colorbox{pl!15}{\textcolor{pl}{\scriptsize\bfseries NOVO}}}
+
+\tikzset{
+  bloco/.style={rounded corners=6pt, fill=#1!10, draw=#1!70, line width=0.8pt, inner sep=7pt},
+  titulo/.style={font=\bfseries\small, text=#1!80!black},
+  ponta/.style={draw=med, fill=med, text=white, font=\bfseries\small, rounded corners=3pt, inner sep=3pt},
+  sonda/.style={med, line width=1.4pt},
+  realim/.style={pl, line width=1.6pt},
+}
+\ctikzset{bipoles/length=1.1cm}
+
+% faixa de título de cada montagem
+\newcommand{\cabecalho}[3]{%
+  \begin{tcolorbox}[enhanced, colback=#1!12, colframe=#1!70!black, boxrule=0pt, leftrule=6pt,
+    arc=2pt, left=6pt, top=3pt, bottom=3pt]
+  {\LARGE\bfseries #2}\hfill{\large #3}
+  \end{tcolorbox}\vspace{-2pt}}
+
+\newtcolorbox{caixa}[2][]{colback=#2!6, colframe=#2!60!black, boxrule=0.6pt, arc=2pt,
+  left=4pt, right=4pt, top=2pt, bottom=2pt, fonttitle=\bfseries\small, title={#1}, fontupper=\small}
+
+\begin{document}
+
+% ==================================================================================================
+%                                          PÁGINA 1 – COMO LER
+% ==================================================================================================
+\cabecalho{gen}{Exp.\ 10 – Compensador Avanço de Fase · guia de bancada}{como ler este guia}
+
+\begin{minipage}[t]{0.47\linewidth}\vspace{0pt}
+\begin{caixa}[Cada bloco tem uma cor — a mesma no esquema e na lista de peças]{gen}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}c l l@{}}
+\chip{som} & \textcolor{som}{\textbf{\num{1} SOMADOR}} & amp-op 1: soma $V_{G1}$ e $V_c$ (três R iguais)\\
+\chip{comp} & \textcolor{compd}{\textbf{\num{2} COMPENSADOR}} & amp-op 2: $R_1\parallel C_1$ na entrada, $R_2\parallel C_2$ na realim.\\
+\chip{inv} & \textcolor{inv}{\textbf{\num{3} INVERSOR}} & amp-op 3: ganho $-1$ (ou $-R_4/R_3$)\\
+\chip{pl} & \textcolor{pl}{\textbf{\num{4} PLANTA}} & $R_c$, ($L_1$), $C_c$ — a saída $V_c$ é a tensão em $C_c$\\
+\chip{med} & \textcolor{med}{\textbf{CH1 / CH2}} & onde ligar as pontas do osciloscópio\\
+\end{tabular}
+
+\medskip
+\colorbox{troca}{\textbf{fundo amarelo}} = componente que \textbf{muda} em relação à montagem anterior.
+\quad \novo\ = bloco que entra agora.
+
+\textcolor{pl}{\rule[0.5ex]{1.2cm}{1.6pt}} fio grosso vermelho = realimentação ($V_c$ volta ao somador).
+\end{caixa}
+
+\begin{caixa}[Ordem de montagem: cada passo reaproveita o anterior]{gen}
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm, font=\small,
+  m/.style={rounded corners=4pt, draw=#1!70!black, fill=#1!12, line width=0.8pt, minimum width=2.9cm,
+            minimum height=1.25cm, align=center},
+  seta/.style={-{Stealth[length=6pt]}, line width=1pt, gray}]
+  \node[m=inv]  (A) at (0,0)   {\textbf{A} · Tabela 1\\inversor};
+  \node[m=comp] (B) at (4.1,0) {\textbf{B} · Tabela 2\\compensador\\(malha aberta)};
+  \node[m=pl]   (C) at (0,-2.5) {\textbf{C} · Tabelas 3 e 4\\malha fechada RC};
+  \node[m=pl]   (D) at (4.1,-2.5) {\textbf{D} · Tabelas 5, 6, 7\\malha fechada RLC};
+  \draw[seta] (A) -- node[above, font=\scriptsize]{+ compensador} node[below, font=\scriptsize]{R3 $\to$ 50 k} (B);
+  \draw[seta] (B.south) -- ++(0,-0.45) -| node[pos=0.25, above, font=\scriptsize, fill=white]{troca R1 C1 R2 C2, + somador, + planta} (C.north);
+  \draw[seta] (C) -- node[above, font=\scriptsize]{+ $L_1$ em série} (D);
+\end{tikzpicture}
+\end{caixa}
+
+\begin{caixa}[Amp-op 741 (DIP-8) visto de cima]{gen}
+\begin{minipage}{0.42\linewidth}\centering
+\begin{tikzpicture}[scale=0.62, font=\scriptsize]
+  \draw[fill=gray!15, rounded corners=2pt] (0,0) rectangle (3,4.2);
+  \draw (1.5,4.2) arc (0:-180:0.35) ;
+  \draw[fill=white] (1.15,4.2) arc (180:360:0.35);
+  \foreach \i/\n in {1/{offset},2/{\textbf{$-$} entrada},3/{\textbf{+} entrada},4/{\textbf{V$-$}}}{
+    \draw[fill=gray!60] (-0.35,{4.2-\i*0.9-0.1}) rectangle (0,{4.2-\i*0.9+0.1});
+    \node[left] at (-0.35,{4.2-\i*0.9}) {\n\ \textbf{\i}};}
+  \foreach \i/\n in {8/{nc},7/{\textbf{V+}},6/{\textbf{saída}},5/{offset}}{
+    \pgfmathsetmacro{\k}{9-\i}
+    \draw[fill=gray!60] (3,{4.2-\k*0.9-0.1}) rectangle (3.35,{4.2-\k*0.9+0.1});
+    \node[right] at (3.35,{4.2-\k*0.9}) {\textbf{\i}\ \n};}
+  \fill (0.4,3.7) circle (0.12);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}{0.55\linewidth}\small
+\begin{itemize}
+\item Nos esquemas: \textbf{2} = entrada $-$, \textbf{3} = entrada + (sempre no terra), \textbf{6} = saída.
+\item Alimentação em \textbf{todos} os amp-ops: \textbf{7} no +12 V (ou +15 V) e \textbf{4} no $-$12 V; não está desenhada.
+\item A bolinha / o chanfro marca o pino 1.
+\end{itemize}
+\end{minipage}
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.505\linewidth}\vspace{0pt}
+\begin{caixa}[Achar as peças: código de cores e marcações]{gen}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}l l l l@{}}
+\textbf{valor} & \textbf{faixas} & \textbf{cores} & \textbf{onde}\\\hline
+\kO{1}   & \faixas{marrom}{preto}{vermelho}  & marrom preto vermelho & $R_c$\\
+\kO{10}  & \faixas{marrom}{preto}{laranja}   & marrom preto laranja  & $R$, $R_3$, $R_4$, $R_5$, $R_6$\\
+\kO{12}  & \faixas{marrom}{vermelho}{laranja}& marrom vermelho laranja & $R_1$ (B)\\
+\kO{15}  & \faixas{marrom}{verde}{laranja}   & marrom verde laranja  & $R_1$ (C, D)\\
+\kO{50}  & \faixas{marrom}{preto}{amarelo}\,$\parallel$\,\faixas{marrom}{preto}{amarelo} & 2 $\times$ 100 k em paralelo & $R_3$ (B)\\
+\kO{390} & \faixas{laranja}{branco}{amarelo}  & laranja branco amarelo & $R_2$ (C, D)\\
+\end{tabular}
+
+\smallskip
+\begin{tabular}{@{}l l l@{}}
+\textbf{capacitor} & \textbf{código impresso} & \textbf{onde}\\\hline
+1 µF   & \textbf{105} (ou 1µ) & $C_1$ (B), $C_c$ (C, D)\\
+100 nF & \textbf{104}         & $C_2$ (B)\\
+47 nF  & \textbf{473}         & $C_1$ (C, D)\\
+1 nF   & \textbf{102}         & $C_2$ (C, D)\\
+\end{tabular}
+
+\smallskip
+\footnotesize 50 k\ensuremath{\Omega} não existe na série comercial: \textbf{2 $\times$ 100 k\ensuremath{\Omega} em paralelo} dá exatamente 50 k
+(ou 47 k + 3,3 k em série). Prefira capacitores \textbf{sem polaridade} (poliéster/cerâmico): o sinal é alternado.
+Indutor $L_1$ = 77 mH: o da bancada; meça a resistência dele se der.
+\end{caixa}
+
+\begin{caixa}[Antes de cada aquisição]{gen}
+\begin{itemize}
+\item Terra do gerador, das duas pontas e da fonte \textbf{no mesmo ponto}.
+\item \textbf{CH1} sempre na saída do gerador ($V_{G1}$); \textbf{CH2} no ponto marcado em rosa.
+\item Ponta e canal na mesma atenuação (1X ou 10X).
+\item Senoide: deixe 2 a 3 períodos na tela. Onda quadrada: borda de subida a 1 divisão da esquerda.
+\end{itemize}
+\end{caixa}
+
+\begin{caixa}[Pegadinhas desta folha]{pl}
+\begin{itemize}
+\item A \textbf{Tabela 4} da folha troca $R_1$ e $R_2$ (390 k e 15 k). Os esquemas da folha e as Tabelas 3, 5 e 7 usam
+      $R_1 = 15$ k e $R_2 = 390$ k: \textbf{não mexa no circuito entre as Tabelas 3 e 4}.
+\item Nas montagens C e D a saída sai \textbf{invertida} (fase perto de 180°): não é erro.
+\item No degrau (Tabelas 3 e 5) o modelo pede $\approx$ 48 V ao amp-op 3: \textbf{ele satura}. Tempos medidos maiores e
+      $M_p$ menor que o teórico são esperados; $V_c$ em regime deve bater.
+\end{itemize}
+\end{caixa}
+\end{minipage}
+
+\newpage
+% ==================================================================================================
+%                                          MONTAGEM A – TABELA 1
+% ==================================================================================================
+\cabecalho{inv}{Montagem A · Tabela 1}{circuito inversor · senoide 500 Hz, 2 Vpp}
+
+\begin{center}
+\begin{circuitikz}[scale=1.75, transform shape, font=\small]
+  \coordinate (vin) at (0,0);
+  \draw (vin) to[sV, l_=$V_{G1}$, color=gen] ++(0,-2.6) node[ground]{};
+  \draw[sonda] (vin) -- ++(0,0.8) node[ponta, above]{CH1};
+  \node[op amp, anchor=-, color=inv] (A3) at (5,0) {};
+  \node[font=\scriptsize, above left] at (A3.-) {2};
+  \node[font=\scriptsize, below left] at (A3.+) {3};
+  \node[font=\scriptsize, above right] at (A3.out) {6};
+  \coordinate (n3) at ($(A3.-)+(-0.5,0)$);
+  \draw (vin) to[R, l=\cv{R_3}{\kO{10}}, color=inv, *-*] (n3) -- (A3.-);
+  \draw (n3) -- ++(0,1.5) coordinate(t3) to[R, l=\cv{R_4}{\kO{10}}, color=inv] (t3 -| A3.out) -- (A3.out) node[circ]{};
+  \coordinate (iT) at ($(t3)+(0,0.8)$);
+  \draw (A3.+) -- ++(0,-0.4) node[ground]{};
+  \draw (A3.out) -- ++(1.6,0) coordinate(vo) node[circ]{};
+  \draw[sonda] (vo) -- ++(0,0.8) node[ponta, above]{CH2};
+  \begin{scope}[on background layer]
+    \node[bloco=inv, fit=(n3)(iT)(A3)(vo), label={[titulo=inv]above:\num{3} INVERSOR}] {};
+  \end{scope}
+\end{circuitikz}
+\end{center}
+
+\begin{minipage}[t]{0.32\linewidth}
+\begin{caixa}[Lista de peças]{inv}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}l l l@{}}
+\chip{inv} $R_3$ & \kO{10} & \faixas{marrom}{preto}{laranja}\\
+\chip{inv} $R_4$ & \kO{10} & \faixas{marrom}{preto}{laranja}\\
+amp-op & 741 & pinos 2, 3, 6 (+ 4 e 7)\\
+\end{tabular}
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\linewidth}
+\begin{caixa}[Gerador e osciloscópio]{gen}
+\textbf{Gerador:} senoide, \textbf{500 Hz}, \textbf{2 Vpp}, sem offset.\\
+\textbf{CH1:} saída do gerador. \textbf{CH2:} pino 6.\\
+\textbf{Tela:} 500 µs/div (2,5 períodos); CH1 e CH2 em 500 mV/div.\\
+\textbf{Meça:} Vpp de CH2 e o ângulo de fase de CH2 em relação a CH1.
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\linewidth}
+\begin{caixa}[O que você deve ver]{inv}
+\textbf{Vpp da saída $\approx$ 2,0 V} \quad \textbf{fase = 180°}\\
+CH2 é o espelho de CH1: quando uma está no pico, a outra está no vale.
+$V_o/V_i = -R_4/R_3 = -1$.
+\end{caixa}
+\end{minipage}
+
+\newpage
+% ==================================================================================================
+%                                          MONTAGEM B – TABELA 2
+% ==================================================================================================
+\cabecalho{comp}{Montagem B · Tabela 2}{compensador em malha aberta · senoide 2 Vpp, 20 Hz a 5 kHz}
+
+\begin{center}
+\begin{circuitikz}[scale=1.4, transform shape, font=\small]
+  \coordinate (vin) at (0,0);
+  \draw (vin) to[sV, l_=$V_{G1}$, color=gen] ++(0,-2.6) node[ground]{};
+  \draw[sonda] (vin) -- ++(0,0.8) node[ponta, above]{CH1};
+  % \num{2} compensador
+  \node[op amp, anchor=-, color=comp] (A2) at (5.6,0) {};
+  \node[font=\scriptsize, above left] at (A2.-) {2};
+  \node[font=\scriptsize, below left] at (A2.+) {3};
+  \node[font=\scriptsize, above right] at (A2.out) {6};
+  \coordinate (p1) at (0.9,0);
+  \coordinate (p2) at (3.9,0);
+  \coordinate (n2) at ($(A2.-)+(-0.5,0)$);
+  \draw (vin) -- (p1) to[R, l_=\cv{R_1}{\kO{12}}, color=comp, *-*] (p2) -- (n2) node[circ]{} -- (A2.-);
+  \draw (p1) -- ++(0,1.3) coordinate(c1a) to[C, l=\cv{C_1}{1\,µF}, color=comp] (c1a -| p2) -- (p2);
+  \draw (n2) -- ++(0,2.0) coordinate(r2a) to[R, l=\cv{R_2}{\kO{10}}, color=comp] (r2a -| A2.out) coordinate(r2b);
+  \draw (r2a) node[circ]{} -- ++(0,1.3) coordinate(c2a) to[C, l=\cv{C_2}{100\,nF}, color=comp] (c2a -| A2.out) -- (r2b) node[circ]{} -- (A2.out) node[circ]{};
+  \coordinate (cT) at ($(c2a)+(0,0.8)$);
+  \draw (A2.+) -- ++(0,-0.4) node[ground]{};
+  % \num{3} inversor
+  \node[op amp, anchor=-, color=inv] (A3) at ($(A2.out)+(4.2,0)$) {};
+  \node[font=\scriptsize, above left] at (A3.-) {2};
+  \node[font=\scriptsize, below left] at (A3.+) {3};
+  \node[font=\scriptsize, above right] at (A3.out) {6};
+  \coordinate (n3) at ($(A3.-)+(-0.5,0)$);
+  \draw (A2.out) to[R, l=\tv{R_3}{\kO{50}}, color=inv, -*] (n3) -- (A3.-);
+  \draw (n3) -- ++(0,1.5) coordinate(t3) to[R, l=\cv{R_4}{\kO{10}}, color=inv] (t3 -| A3.out) -- (A3.out) node[circ]{};
+  \coordinate (iT) at ($(t3)+(0,0.8)$);
+  \draw (A3.+) -- ++(0,-0.4) node[ground]{};
+  \draw (A3.out) -- ++(1.4,0) coordinate(vo) node[circ]{};
+  \draw[sonda] (vo) -- ++(0,0.8) node[ponta, above]{CH2};
+  \begin{scope}[on background layer]
+    \node[bloco=comp, fit=(p1)(cT)(A2)(r2b), label={[titulo=comp]above:\num{2} COMPENSADOR \novo}] {};
+    \node[bloco=inv, fit=(n3)(iT)(A3)(vo), label={[titulo=inv]above:\num{3} INVERSOR (já montado em A)}] {};
+  \end{scope}
+\end{circuitikz}
+\end{center}
+\vspace{-4pt}
+\begin{minipage}[t]{0.33\linewidth}
+\begin{caixa}[Lista de peças (amarelo = mudou desde A)]{comp}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}l l l@{}}
+\chip{comp} $R_1$ & \kO{12} & \faixas{marrom}{vermelho}{laranja}\\
+\chip{comp} $C_1$ & 1 µF & \textbf{105}\\
+\chip{comp} $R_2$ & \kO{10} & \faixas{marrom}{preto}{laranja}\\
+\chip{comp} $C_2$ & 100 nF & \textbf{104}\\
+\chip{inv} \colorbox{troca}{$R_3$} & \colorbox{troca}{\kO{50}} & 2 $\times$ 100 k em paralelo\\
+\chip{inv} $R_4$ & \kO{10} & \faixas{marrom}{preto}{laranja}\\
+\end{tabular}
+
+\smallskip\footnotesize Do A para o B: monte o bloco \num{2} antes do inversor, troque $R_3$ por 50 k.
+O gerador agora entra no \num{2}, não no \num{3}.
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.25\linewidth}
+\begin{caixa}[Gerador e osciloscópio]{gen}
+\textbf{Gerador:} senoide \textbf{2 Vpp}, uma linha por frequência.\\
+\textbf{CH1:} gerador. \textbf{CH2:} pino 6 do amp-op 3.\\
+\textbf{Tela:} 2 a 3 períodos (a sessão sugere em \texttt{teoria}).\\
+\textbf{Meça:} Vpp de CH2 e fase de CH2 em relação a CH1 (CH2 adiantada = fase positiva).
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.39\linewidth}
+\begin{caixa}[O que você deve ver (modelo ideal)]{comp}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}r c c c@{}}
+\textbf{f} & \textbf{Vpp saída} & \textbf{fase} & \textbf{pico no pino 6 do \num{2}}\\\hline
+20 Hz  & 0,60 V & +49° & 1,5 V\\
+100 Hz & 2,15 V & +50° & 5,4 V\\
+300 Hz & 3,54 V & +25° & 8,8 V\\
+1 kHz  & 3,95 V & +8°  & 9,9 V\\
+3 kHz  & 3,99 V & +3°  & 10,0 V\\
+5 kHz  & 4,00 V & +2°  & 10,0 V\\
+\end{tabular}
+
+\smallskip\footnotesize Fase máxima de 58° perto de 46 Hz (entre o zero em 13 Hz e o polo em 159 Hz).
+De 1 kHz para cima o amp-op 2 chega a 10 V de pico: se CH2 achatar, ele saturou.
+\end{caixa}
+\end{minipage}
+
+\newpage
+% ==================================================================================================
+%                                          MONTAGEM C – TABELAS 3 E 4
+% ==================================================================================================
+\cabecalho{pl}{Montagem C · Tabelas 3 e 4}{malha fechada com planta RC}
+
+\begin{center}
+\resizebox{\linewidth}{!}{\begin{circuitikz}[font=\small]
+  \coordinate (vin) at (0,0);
+  \draw (vin) to[sV, l_=$V_{G1}$, color=gen] ++(0,-2.6) node[ground]{};
+  \draw[sonda] (vin) -- ++(0,0.8) node[ponta, above]{CH1};
+  % \num{1} somador
+  \node[op amp, anchor=-, color=som] (A1) at (4.6,0) {};
+  \node[font=\scriptsize, above left] at (A1.-) {2};
+  \node[font=\scriptsize, below left] at (A1.+) {3};
+  \node[font=\scriptsize, above right] at (A1.out) {6};
+  \coordinate (n1) at ($(A1.-)+(-0.9,0)$);
+  \draw (vin) node[circ]{} to[R, l=\cv{R}{\kO{10}}, color=som, -*] (n1) -- (A1.-);
+  \draw (n1) -- ++(0,1.5) coordinate(t1) to[R, l=\cv{R}{\kO{10}}, color=som] (t1 -| A1.out) -- (A1.out) node[circ]{};
+  \coordinate (sT) at ($(t1)+(0,0.8)$);
+  \draw (A1.+) -- ++(0,-0.4) node[ground]{};
+  % \num{2} compensador
+  \node[op amp, anchor=-, color=comp] (A2) at ($(A1.out)+(5.6,0)$) {};
+  \node[font=\scriptsize, above left] at (A2.-) {2};
+  \node[font=\scriptsize, below left] at (A2.+) {3};
+  \node[font=\scriptsize, above right] at (A2.out) {6};
+  \coordinate (p1) at ($(A1.out)+(0.7,0)$);
+  \coordinate (p2) at ($(A2.-)+(-1.3,0)$);
+  \coordinate (n2) at ($(A2.-)+(-0.5,0)$);
+  \draw (A1.out) -- (p1) to[R, l_=\tv{R_1}{\kO{15}}, color=comp, *-*] (p2) -- (n2) node[circ]{} -- (A2.-);
+  \draw (p1) -- ++(0,1.3) coordinate(c1a) to[C, l=\tv{C_1}{47\,nF}, color=comp] (c1a -| p2) -- (p2);
+  \draw (n2) -- ++(0,2.0) coordinate(r2a) to[R, l=\tv{R_2}{\kO{390}}, color=comp] (r2a -| A2.out) coordinate(r2b);
+  \draw (r2a) node[circ]{} -- ++(0,1.3) coordinate(c2a) to[C, l=\tv{C_2}{1\,nF}, color=comp] (c2a -| A2.out) -- (r2b) node[circ]{} -- (A2.out) node[circ]{};
+  \coordinate (cT) at ($(c2a)+(0,0.8)$);
+  \draw (A2.+) -- ++(0,-0.4) node[ground]{};
+  % \num{3} inversor
+  \node[op amp, anchor=-, color=inv] (A3) at ($(A2.out)+(3.9,0)$) {};
+  \node[font=\scriptsize, above left] at (A3.-) {2};
+  \node[font=\scriptsize, below left] at (A3.+) {3};
+  \node[font=\scriptsize, above right] at (A3.out) {6};
+  \coordinate (n3) at ($(A3.-)+(-0.5,0)$);
+  \draw (A2.out) to[R, l=\tv{R_5}{\kO{10}}, color=inv, -*] (n3) -- (A3.-);
+  \draw (n3) -- ++(0,1.5) coordinate(t3) to[R, l=\cv{R_6}{\kO{10}}, color=inv] (t3 -| A3.out) -- (A3.out) node[circ]{};
+  \coordinate (iT) at ($(t3)+(0,0.8)$);
+  \draw (A3.+) -- ++(0,-0.4) node[ground]{};
+  % \num{4} planta RC
+  \draw (A3.out) to[R, l=\cv{R_c}{\kO{1}}, color=pl] ++(3.2,0) coordinate(vc) node[circ]{};
+  \draw (vc) to[C, l=\cv{C_c}{1\,µF}, color=pl] ++(0,-2.2) node[ground]{};
+  \draw[sonda] (vc) -- ++(0,0.9) node[ponta, above]{CH2 = $V_c$};
+  \coordinate (plA) at ($(A3.out)+(0.3,0.9)$);
+  \coordinate (plB) at ($(vc)+(0.6,-2.9)$);
+  % realimentação: Vc volta direto ao somador
+  \draw[realim] (vc) -- ++(1.3,0) |- ($(n1)+(0,-4.4)$) coordinate(b1);
+  \draw (b1) to[R, l=\cv{R}{\kO{10}}, color=som, *-] (n1);
+  \node[pl, font=\bfseries\small, fill=white, inner sep=2pt] at ($(b1)!0.5!(b1 -| vc)$)
+     {realimentação: $V_c$ volta \underline{direto} ao somador (sem inversor) \quad $\blacktriangleleft$};
+  \begin{scope}[on background layer]
+    \node[bloco=som, fit=(n1)(sT)(A1)(A1.out), label={[titulo=som]above:\num{1} SOMADOR \novo}] {};
+    \node[bloco=comp, fit=(p1)(cT)(A2)(r2b), label={[titulo=comp]above:\num{2} COMPENSADOR (troque os 4)}] {};
+    \node[bloco=inv, fit=(n3)(iT)(A3)(A3.out), label={[titulo=inv]above:\num{3} INVERSOR}] {};
+    \node[bloco=pl, fit=(plA)(vc)(plB), label={[titulo=pl]below:\num{4} PLANTA RC \novo}] {};
+  \end{scope}
+\end{circuitikz}}
+\end{center}
+\vspace{-6pt}
+\begin{minipage}[t]{0.33\linewidth}
+\begin{caixa}[Lista de peças (amarelo = mudou desde B)]{pl}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}l l l@{}}
+\chip{som} $R$ ($\times$ 3) & \kO{10} & \faixas{marrom}{preto}{laranja} \novo\\
+\chip{comp} \colorbox{troca}{$R_1$} & \colorbox{troca}{\kO{15}} & \faixas{marrom}{verde}{laranja}\\
+\chip{comp} \colorbox{troca}{$C_1$} & \colorbox{troca}{47 nF} & \textbf{473}\\
+\chip{comp} \colorbox{troca}{$R_2$} & \colorbox{troca}{\kO{390}} & \faixas{laranja}{branco}{amarelo}\\
+\chip{comp} \colorbox{troca}{$C_2$} & \colorbox{troca}{1 nF} & \textbf{102}\\
+\chip{inv} \colorbox{troca}{$R_5$} (era $R_3$) & \colorbox{troca}{\kO{10}} & \faixas{marrom}{preto}{laranja}\\
+\chip{inv} $R_6$ (era $R_4$) & \kO{10} & \faixas{marrom}{preto}{laranja}\\
+\chip{pl} $R_c$ & \kO{1} & \faixas{marrom}{preto}{vermelho} \novo\\
+\chip{pl} $C_c$ & 1 µF & \textbf{105} \novo\\
+\end{tabular}
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.27\linewidth}
+\begin{caixa}[Tabela 3 · degrau]{gen}
+\textbf{Gerador:} \textbf{quadrada}, 50 Hz, \textbf{1 Vpp}, duty 50 \%.\\
+\textbf{Tela:} 25 µs/div para ver a subida (aumente se o amp-op saturar); borda a 1 div da esquerda.\\
+\textbf{Meça:} $\tau$, $T_r$, $T_s$, Vc.
+\end{caixa}
+\begin{caixa}[Tabela 4 · senoide]{gen}
+\textbf{Mesmo circuito}, só muda o gerador:\\
+\textbf{senoide}, 100 Hz, 1 Vpp. Tela: 2,5 ms/div.\\
+\textbf{Meça:} Vpp de CH2 e fase.
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.37\linewidth}
+\begin{caixa}[O que você deve ver (modelo ideal)]{pl}
+\textbf{Tabela 3:} sem sobressinal (resposta de 1ª ordem).\\
+$\tau \approx 21$ µs \quad $T_r \approx 46$ µs \quad $T_s \approx 87$ µs\\
+$V_c \approx 0{,}48$ V de pico (0,96 Vpp), \textbf{invertida}; erro de 3,7 \%.\\
+\footnotesize Na borda o amp-op 3 satura (o modelo pede 48 V): tempos medidos \textbf{maiores}.\normalsize
+
+\smallskip
+\textbf{Tabela 4:} \textbf{Vpp $\approx$ 0,96 V}, \textbf{fase $\approx$ 179°} (pode aparecer como $-$179°).
+
+\smallskip\footnotesize Por que não fica subamortecida: o zero ($-$1418 rad/s) fica entre os dois polos
+($-$1000 da planta e $-$2564 do compensador), então o lugar das raízes nunca sai do eixo real.
+\end{caixa}
+\end{minipage}
+
+\newpage
+% ==================================================================================================
+%                                          MONTAGEM D – TABELAS 5, 6 E 7
+% ==================================================================================================
+\cabecalho{pl}{Montagem D · Tabelas 5, 6 e 7}{malha fechada com planta RLC}
+
+\begin{center}
+\resizebox{\linewidth}{!}{\begin{circuitikz}[font=\small]
+  \coordinate (vin) at (0,0);
+  \draw (vin) to[sV, l_=$V_{G1}$, color=gen] ++(0,-2.6) node[ground]{};
+  \draw[sonda] (vin) -- ++(0,0.8) node[ponta, above]{CH1};
+  \node[op amp, anchor=-, color=som] (A1) at (4.6,0) {};
+  \node[font=\scriptsize, above left] at (A1.-) {2};
+  \node[font=\scriptsize, below left] at (A1.+) {3};
+  \node[font=\scriptsize, above right] at (A1.out) {6};
+  \coordinate (n1) at ($(A1.-)+(-0.9,0)$);
+  \draw (vin) node[circ]{} to[R, l=\cv{R}{\kO{10}}, color=som, -*] (n1) -- (A1.-);
+  \draw (n1) -- ++(0,1.5) coordinate(t1) to[R, l=\cv{R}{\kO{10}}, color=som] (t1 -| A1.out) -- (A1.out) node[circ]{};
+  \coordinate (sT) at ($(t1)+(0,0.8)$);
+  \draw (A1.+) -- ++(0,-0.4) node[ground]{};
+  \node[op amp, anchor=-, color=comp] (A2) at ($(A1.out)+(5.6,0)$) {};
+  \node[font=\scriptsize, above left] at (A2.-) {2};
+  \node[font=\scriptsize, below left] at (A2.+) {3};
+  \node[font=\scriptsize, above right] at (A2.out) {6};
+  \coordinate (p1) at ($(A1.out)+(0.7,0)$);
+  \coordinate (p2) at ($(A2.-)+(-1.3,0)$);
+  \coordinate (n2) at ($(A2.-)+(-0.5,0)$);
+  \draw (A1.out) -- (p1) to[R, l_=\cv{R_1}{\kO{15}}, color=comp, *-*] (p2) -- (n2) node[circ]{} -- (A2.-);
+  \draw (p1) -- ++(0,1.3) coordinate(c1a) to[C, l=\cv{C_1}{47\,nF}, color=comp] (c1a -| p2) -- (p2);
+  \draw (n2) -- ++(0,2.0) coordinate(r2a) to[R, l=\cv{R_2}{\kO{390}}, color=comp] (r2a -| A2.out) coordinate(r2b);
+  \draw (r2a) node[circ]{} -- ++(0,1.3) coordinate(c2a) to[C, l=\cv{C_2}{1\,nF}, color=comp] (c2a -| A2.out) -- (r2b) node[circ]{} -- (A2.out) node[circ]{};
+  \coordinate (cT) at ($(c2a)+(0,0.8)$);
+  \draw (A2.+) -- ++(0,-0.4) node[ground]{};
+  \node[op amp, anchor=-, color=inv] (A3) at ($(A2.out)+(3.9,0)$) {};
+  \node[font=\scriptsize, above left] at (A3.-) {2};
+  \node[font=\scriptsize, below left] at (A3.+) {3};
+  \node[font=\scriptsize, above right] at (A3.out) {6};
+  \coordinate (n3) at ($(A3.-)+(-0.5,0)$);
+  \draw (A2.out) to[R, l=\cv{R_5}{\kO{10}}, color=inv, -*] (n3) -- (A3.-);
+  \draw (n3) -- ++(0,1.5) coordinate(t3) to[R, l=\cv{R_6}{\kO{10}}, color=inv] (t3 -| A3.out) -- (A3.out) node[circ]{};
+  \coordinate (iT) at ($(t3)+(0,0.8)$);
+  \draw (A3.+) -- ++(0,-0.4) node[ground]{};
+  % \num{4} planta RLC: L1 entra entre Rc e Cc
+  \draw (A3.out) to[R, l=\cv{R_c}{\kO{1}}, color=pl] ++(2.9,0) coordinate(rl)
+        to[L, l=\tv{L_1}{77\,mH}, color=pl] ++(2.9,0) coordinate(vc) node[circ]{};
+  \draw (vc) to[C, l=\cv{C_c}{1\,µF}, color=pl] ++(0,-2.2) node[ground]{};
+  \draw[sonda] (vc) -- ++(0,0.9) node[ponta, above]{CH2 = $V_c$};
+  \coordinate (plA) at ($(A3.out)+(0.3,0.9)$);
+  \coordinate (plB) at ($(vc)+(0.6,-2.9)$);
+  \draw[realim] (vc) -- ++(1.3,0) |- ($(n1)+(0,-4.4)$) coordinate(b1);
+  \draw (b1) to[R, l=\cv{R}{\kO{10}}, color=som, *-] (n1);
+  \node[pl, font=\bfseries\small, fill=white, inner sep=2pt] at ($(b1)!0.5!(b1 -| vc)$)
+     {realimentação: $V_c$ volta \underline{direto} ao somador (sem inversor) \quad $\blacktriangleleft$};
+  \begin{scope}[on background layer]
+    \node[bloco=som, fit=(n1)(sT)(A1)(A1.out), label={[titulo=som]above:\num{1} SOMADOR}] {};
+    \node[bloco=comp, fit=(p1)(cT)(A2)(r2b), label={[titulo=comp]above:\num{2} COMPENSADOR (igual ao C)}] {};
+    \node[bloco=inv, fit=(n3)(iT)(A3)(A3.out), label={[titulo=inv]above:\num{3} INVERSOR}] {};
+    \node[bloco=pl, fit=(plA)(vc)(plB), label={[titulo=pl]below:\num{4} PLANTA RLC}] {};
+  \end{scope}
+\end{circuitikz}}
+\end{center}
+\vspace{-6pt}
+\begin{minipage}[t]{0.3\linewidth}
+\begin{caixa}[Lista de peças (amarelo = mudou desde C)]{pl}
+\textbf{Única mudança:} abra o fio entre $R_c$ e $C_c$ e coloque
+\colorbox{troca}{\textbf{$L_1$ = 77 mH}} em série. O resto fica como na montagem C:
+
+\smallskip
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}l l@{}}
+\chip{som} $R$ ($\times$ 3) & \kO{10}\\
+\chip{comp} $R_1$, $C_1$ & \kO{15}, 47 nF\\
+\chip{comp} $R_2$, $C_2$ & \kO{390}, 1 nF\\
+\chip{inv} $R_5$, $R_6$ & \kO{10}\\
+\chip{pl} $R_c$, $C_c$ & \kO{1}, 1 µF\\
+\end{tabular}
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.27\linewidth}
+\begin{caixa}[Tabelas 5 e 6 · degrau]{gen}
+\textbf{Gerador:} \textbf{quadrada}, 50 Hz, \textbf{1 Vpp}.\\
+\textbf{Tela:} 250 µs/div; borda a 1 div da esquerda.\\
+\textbf{Meça:} $T_r$, $T_p$, $M_p$, $T_s$, Vc. A Tabela 6 ($\zeta$, $\omega_n$, $\omega_d$) sai da mesma captura.
+\end{caixa}
+\begin{caixa}[Tabela 7 · senoide]{gen}
+\textbf{Mesmo circuito}: \textbf{senoide}, 100 Hz, 1 Vpp. Tela: 2,5 ms/div.\\
+\textbf{Meça:} Vpp de CH2 e fase.
+\end{caixa}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.4\linewidth}
+\begin{caixa}[O que você deve ver (modelo ideal)]{pl}
+\textbf{Tabela 5:} oscilação amortecida, \textbf{invertida}.\\
+$T_r \approx 77$ µs \quad $T_p \approx 0{,}13$ ms \quad $M_p \approx 39$ \% \quad $T_s \approx 0{,}55$ ms\\
+$V_c \approx 0{,}48$ V de pico.\\
+\textbf{Tabela 6:} $\zeta \approx 0{,}28$ \quad $\omega_n \approx 25\,200$ rad/s \quad $\omega_d \approx 24\,200$ rad/s.\\
+\footnotesize O amp-op 3 satura na borda (o modelo pede 48 V): $M_p$ medido menor e tempos maiores;
+a frequência da oscilação depois da saturação tende a seguir $\omega_d$.\normalsize
+
+\smallskip
+\textbf{Tabela 7:} \textbf{Vpp $\approx$ 0,96 V}, \textbf{fase $\approx$ 179°}.
+
+\smallskip\footnotesize A planta RLC sozinha é sobreamortecida ($\zeta = 1{,}8$); é a malha com o compensador que oscila.
+\end{caixa}
+\end{minipage}
+
+\end{document}

@@ -1,0 +1,70 @@
+\sisetup{output-decimal-marker = {,}}
+
+\section{Introdução}
+% TODO
+
+\input{10/tab/componentes.tex}
+
+
+\section{Circuito inversor}
+
+\subsection{Tabela 1}
+% Monte o circuito inversor (R3 = R4 = 10 kΩ), aplique senoide de 500 Hz, 2 Vpp, e meça
+% o Vpp da saída e o ângulo de fase.
+% TODO
+
+\input{10/tab/tabela1.tex}
+\input{10/tex/plot_senoide1.tex}
+
+
+\section{Compensador avanço de fase em malha aberta}
+
+\subsection{Função de transferência}
+% TODO
+
+\begin{equation}
+    G_c(s) = \frac{R_2}{R_1}\,\frac{R_1 C_1\, s + 1}{R_2 C_2\, s + 1}
+\end{equation}
+
+\subsection{Tabela 2}
+% Com C1 = 1 µF, C2 = 100 nF, R1 = 12 kΩ, R2 = 10 kΩ, R3 = 50 kΩ, R4 = 10 kΩ, aplique
+% senoides de 2 Vpp em 20 Hz, 100 Hz, 300 Hz, 1 kHz, 3 kHz e 5 kHz e meça o Vpp da saída
+% e o ângulo de fase.
+% TODO
+
+\input{10/tab/tabela2.tex}
+\input{10/tex/plot_senoide2.tex}
+\input{10/tex/plot_bode2.tex}
+
+
+\section{Malha fechada com planta RC}
+
+\subsection{Função de transferência}
+% TODO
+
+\subsection{Tabela 3}
+% Com Cc = 1 µF, Rc = 1 kΩ, C1 = 47 nF, C2 = 1 nF, R1 = 15 kΩ, R2 = 390 kΩ, R = R6 = 10 kΩ,
+% aplique onda quadrada de 50 Hz, 1 Vpp, e meça τ, Tr, Ts e Vc.
+% TODO
+
+\input{10/tab/tabela3.tex}
+\input{10/tex/plot_degrau3.tex}
+
+\subsection{Tabela 4}
+% Mesmo circuito, senoide de 100 Hz, 1 Vpp: Vpp da saída e ângulo de fase.
+% TODO
+
+\input{10/tab/tabela4.tex}
+\input{10/tex/plot_senoide4.tex}
+
+
+\clearpage
+\section{Malha fechada com planta RLC}
+% Tabelas 5, 6 e 7: sem captura ainda. Depois de medir, rode o exportador de novo e acrescente
+% \input{10/tab/tabela5.tex}, \input{10/tex/plot_degrau5.tex}, \input{10/tab/tabela6.tex},
+% \input{10/tab/tabela7.tex} e \input{10/tex/plot_senoide7.tex}.
+% TODO
+
+
+\section{Conclusão}
+% TODO

@@ -1,0 +1,33 @@
+% Cores validadas para daltonismo (Okabe-Ito); o traço também distingue as curvas na impressão P&B.
+\definecolor{cor-medido}{HTML}{0072B2}
+\definecolor{cor-teorico}{HTML}{D55E00}
+\definecolor{cor-carga}{HTML}{009E73}
+\begin{figure}[htbp]
+    \centering
+    \pgfplotslegendfromname{leg-bode2}\par\smallskip
+    \begin{tikzpicture}
+        \begin{groupplot}[
+            group style={group size=1 by 2, vertical sep=0.6cm, xlabels at=edge bottom, xticklabels at=edge bottom},
+            scale only axis, width=0.8\textwidth, height=0.22\textwidth, xmode=log,
+            xlabel={frequência (Hz)},
+            grid=major, grid style={gray!20},
+            title style={font=\small, at={(0,1)}, anchor=south west},
+            scaled ticks=false,
+            tick label style={font=\footnotesize, /pgf/number format/.cd, fixed, use comma, 1000 sep={\,}},
+            legend columns=3, legend style={font=\footnotesize, draw=none, /tikz/every even column/.append style={column sep=0.6em}},
+            unbounded coords=jump,
+        ]
+            \nextgroupplot[ylabel={$|G|$ (dB)}, legend to name=leg-bode2]
+            \addplot[cor-teorico, dashed, line width=0.9pt, mark=none] table[x=f, y=db, col sep=comma] {10/csv/bode_t2_teo.csv};
+            \addlegendentry{teórico}
+            \addplot[only marks, mark=square*, mark size=2.2pt, cor-medido] table[x=f, y=db, col sep=comma] {10/csv/bode_t2_exp.csv};
+            \addlegendentry{medido}
+            \nextgroupplot[ylabel={fase ($^\circ$)}]
+            \addplot[cor-teorico, dashed, line width=0.9pt, mark=none] table[x=f, y=fase, col sep=comma] {10/csv/bode_t2_teo.csv};
+            \addplot[only marks, mark=square*, mark size=2.2pt, cor-medido] table[x=f, y=fase, col sep=comma] {10/csv/bode_t2_exp.csv};
+        \end{groupplot}
+    \end{tikzpicture}
+    \caption{Resposta em frequência do compensador (Tabela~\ref{tab:tabela2}): módulo e fase,
+             modelo teórico e pontos medidos.}
+    \label{fig:bode2}
+\end{figure}

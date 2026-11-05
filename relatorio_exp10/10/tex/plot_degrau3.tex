@@ -1,0 +1,30 @@
+% Cores validadas para daltonismo (Okabe-Ito); o traço também distingue as curvas na impressão P&B.
+\definecolor{cor-medido}{HTML}{0072B2}
+\definecolor{cor-teorico}{HTML}{D55E00}
+\definecolor{cor-carga}{HTML}{009E73}
+\begin{figure}[htbp]
+    \centering
+    \pgfplotslegendfromname{leg-deg3}\par\smallskip
+    \begin{tikzpicture}
+        \begin{groupplot}[
+            group style={group size=1 by 1, horizontal sep=1.8cm, vertical sep=1.6cm},
+            scale only axis, width=0.7\textwidth, height=0.24\textwidth,
+            xlabel={tempo após a borda de subida (ms)}, ylabel={tensão (V)},
+            grid=major, grid style={gray!20},
+            title style={font=\small, at={(0,1)}, anchor=south west},
+            scaled ticks=false,
+            tick label style={font=\footnotesize, /pgf/number format/.cd, fixed, use comma, 1000 sep={\,}},
+            legend columns=3, legend style={font=\footnotesize, draw=none, /tikz/every even column/.append style={column sep=0.6em}},
+            unbounded coords=jump, legend columns=4,
+        ]
+            \nextgroupplot[xmin=-0.017, xmax=0.205, legend to name=leg-deg3]
+            \addplot[gray!70, thick, const plot] table[x=t, y=e1, col sep=comma] {10/csv/degrau_t3_c3.1.csv}; \addlegendentry{entrada $e_1$}
+            \addplot[cor-medido, line width=1.1pt] table[x=t, y=exp, col sep=comma] {10/csv/degrau_t3_c3.1.csv}; \addlegendentry{medido ($-V_c$)}
+            \addplot[cor-teorico, dashed, line width=0.9pt] table[x=t, y=teo, col sep=comma] {10/csv/degrau_t3_c3.1.csv}; \addlegendentry{teórico}
+            \addplot[cor-carga, densely dotted, line width=1.1pt] table[x=t, y=carga, col sep=comma] {10/csv/degrau_t3_c3.1.csv}; \addlegendentry{c/ carga do inversor}
+        \end{groupplot}
+    \end{tikzpicture}
+    \caption{Resposta ao degrau da Tabela~\ref{tab:tabela3}: entrada, saída medida e saídas dos dois
+             modelos, todas com o sinal trocado ($-V_c$), já que a malha inverte a saída em relação à entrada.}
+    \label{fig:degrau3}
+\end{figure}

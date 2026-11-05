@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 import numpy as np
 
 from .. import modelo
-from .blocos import InversorRealimentacao, Somador
+from .blocos import Bloco, InversorRealimentacao, Somador
 from .controladores import Controlador
 from .ft import FT
 from .plantas import Planta
@@ -16,11 +16,16 @@ class MalhaFechada:
 
     `carga_do_inversor` inclui o que o modelo do roteiro ignora: o resistor R
     de entrada do amp-op 3 em paralelo com o capacitor da planta.
+
+    Com `inversor_serie` (Exp. 10) o inversor fica no caminho direto, entre o
+    controlador e a planta, e V_c volta direto ao somador: V_c/E₁ = −G_c·G/(1 + G_c·G),
+    a saída sai invertida. A carga sobre o capacitor é o R do somador, do mesmo valor.
     """
     controlador: Controlador
     planta: Planta
     R: float = 10e3
     carga_do_inversor: bool = False
+    inversor_serie: Bloco | None = None
 
     @property
     def somador(self):
@@ -36,11 +41,13 @@ class MalhaFechada:
 
     def direto(self) -> FT:
         """G_c·G: do erro até V_c (os dois estágios inversores se cancelam)."""
-        return (self.somador.ft() * self.controlador.ft() * self.planta_efetiva.ft()).normalizada()
+        serie = self.inversor_serie.ft() if self.inversor_serie else 1.0
+        return (self.somador.ft() * self.controlador.ft() * serie * self.planta_efetiva.ft()).normalizada()
 
     def ft(self) -> FT:
         """V_c/E₁."""
-        return self.direto().malha(self.inversor.ft()).normalizada()
+        h = 1.0 if self.inversor_serie else self.inversor.ft()
+        return self.direto().malha(h).normalizada()
 
     # ------------------------------------------------------------ análise
     def polos(self):

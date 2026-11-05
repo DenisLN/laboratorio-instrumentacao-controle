@@ -43,6 +43,7 @@ class RespostaTeorica:
         if not self.estavel:
             return dict(tau=NAN, tr=NAN, tp=NAN, mp=NAN, ts=NAN, subida="0-100")
         num, den = self.ft
+        num = num * np.sign(self.ganho_dc or 1.0)     # saída invertida (Exp. 10): mede a forma, não o sinal
         dom = self.dominante
         if self.ft.ordem == 1 and len(num) == 1:
             return dict(metricas.primeira_ordem(dom["tau"]), tp=NAN, mp=0.0, subida="10-90")
@@ -103,7 +104,7 @@ class RespostaMedida:
     """
 
     def __init__(self, captura, frequencia=None, subida="0-100", integral=False, entrada="CH1",
-                 saida="CH2", suavizacao=60e-6, banda=0.02):
+                 saida="CH2", suavizacao=60e-6, banda=0.02, invertida=False):
         self.captura = captura
         self.frequencia_nominal = frequencia
         self.subida = subida
@@ -111,6 +112,7 @@ class RespostaMedida:
         self.canal_entrada, self.canal_saida = entrada, saida
         self.suavizacao = suavizacao
         self.banda = banda
+        self.sinal = -1.0 if invertida else 1.0    # saída invertida (Exp. 10): mede em −CH2
 
     # ------------------------------------------------------------ sinais
     @property
@@ -124,7 +126,7 @@ class RespostaMedida:
     @cached_property
     def y(self):
         """Saída com média móvel (reduz o ruído de quantização)."""
-        return sinais.media_movel(self.captura[self.canal_saida], self.captura.dt, self.suavizacao)
+        return self.sinal * sinais.media_movel(self.captura[self.canal_saida], self.captura.dt, self.suavizacao)
 
     @cached_property
     def lsb(self):
@@ -181,7 +183,7 @@ class RespostaMedida:
     @cached_property
     def por_trecho(self):
         res = []
-        bruto = self.captura[self.canal_saida]
+        bruto = self.sinal * self.captura[self.canal_saida]
         k = max(3, int(round(self.suavizacao / self.captura.dt)))
         for i, j, s in self.trechos:
             seg = s * self.y[i:j]
